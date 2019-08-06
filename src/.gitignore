@@ -1,0 +1,5 @@
+Atoms.txt
+*.png
+*.data
+*.dump
+__pycache__
