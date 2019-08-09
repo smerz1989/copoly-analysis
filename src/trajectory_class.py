@@ -8,6 +8,7 @@ import numpy as np
 from math import *
 from dump import dump
 from subprocess import call, check_output
+import re
 
 class Molecule(object):
     """This class is used to represent a molecule in a simulation and holds all
@@ -206,7 +207,6 @@ def load_bond_trajectory(filename):
     times = d.time()
     bond_snapshots = {}
     for timestep in times:
-        print("Processing timestep: "+str(timestep))
         b_type,batom1,batom2 = d.vecs(timestep,"c_bcomp[1]","c_bcomp[2]","c_bcomp[3]")
         bonds = {}
         for bid,(btype,batom1,batom2) in enumerate(zip(b_type,batom1,batom2)):
@@ -248,6 +248,7 @@ def construct_molecule_trajectory(datafile,bondtrajectory):
     bonds = load_bond_trajectory(bondtrajectory)
     snapshots = {}
     for timestep in bonds:
+        print("Processing timestep: {}".format(timestep))
         snapshots[timestep] = SimulationSnapshot(atoms,bonds[timestep])
     return snapshots
 
@@ -303,22 +304,62 @@ class SimulationSnapshot(object):
     def __init__(self,atoms,bonds):
         self.atoms = {atom.atomID: atom for atom in atoms}
         self.bonds = bonds
+        self.anchor_atoms = {}
         self.topology = self.create_topology_network()
-
-    def create_topology_network(self):
+        self.chain_lengths = self.get_chain_lengths()
+        #self.chains = ntwkx.connected_components(self.topology)
+    
+    def create_topology_network(self,anchor_atom_type=8):
         G = ntwkx.Graph()
         for atom in self.atoms:
             G.add_node(atom)
+            if self.atoms[atom].atomType==anchor_atom_type:
+                self.anchor_atoms[atom]=self.atoms[atom]
         ntwkx.set_node_attributes(G,self.atoms,name="Atom")
         G.add_edges_from([(self.bonds[bond].atom1,self.bonds[bond].atom2) for bond in self.bonds])
         return(G)
   
     def get_number_chains(self):
-        return(ntwkx.number_connected_components(self.topology))
+        return(len([length for length in self.chain_lengths if length>1]))
+
+    def get_number_monomers(self):
+        return(len([length for length in self.chain_lengths if length==1]))
 
     def get_chain_lengths(self):
-        chains = ntwkx.connected_components(self.topology)
-        return([len(chain) for chain in chains]) 
+        return([len(chain)/3 for chain in ntwkx.connected_components(self.topology)]) 
+
+    def get_dop(self):
+        return(np.mean([length for length in self.chain_lengths if length>0.5]))
+
+    def get_pdi(self):
+        chain_lengths = self.get_chain_lengths()
+        n_ave = np.mean([length for length in chain_lengths if length>1])
+        m_ave = np.mean([(length)**2 for length in chain_lengths if length>1]) 
+        return(m_ave/n_ave)
+    
+    def get_chain_sequence(self,chain):
+        sequence = ' '.join([str(self.topology.nodes[node]['Atom'].atomType) for node in chain])
+        return(sequence)
+
+    def get_sequence_probs(self,sequence,filter_atom_type=(5,6,7),a_type_id=3,b_type_id=4):
+        filter_str = r'['+','.join([str(atom_type) for atom_type in filter_atom_type])+']\ ?'
+        filtered_seq = re.sub(filter_str,"",sequence).strip()
+        filtered_seq = re.sub(r'\ ',"",filtered_seq)
+        numAA = len(re.findall(r'(?='+str(a_type_id)*2+')',filtered_seq))
+        numBB = len(re.findall(r'(?='+str(b_type_id)*2+')',filtered_seq)) 
+        numAB = len(re.findall(r'(?='+str(a_type_id)+str(b_type_id)+')',filtered_seq)) 
+        return((numAA,numBB,numAB))        
+
+    def get_all_probs(self):
+        sequences = self.get_sequences()
+        chain_counts = zip(*[self.get_sequence_probs(seq) for seq in sequences])
+        chain_sums = [sum(count) for count in chain_counts]
+        chain_probs = np.array(chain_sums)/sum(chain_sums)
+        return(chain_probs) 
+
+    def get_sequences(self):
+        sequences = [self.get_chain_sequence(ntwkx.dfs_preorder_nodes(self.topology,anchor)) for anchor in self.anchor_atoms]
+        return(sequences) 
 
 
 class Atom(object):
