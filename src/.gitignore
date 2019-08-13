@@ -2,4 +2,5 @@ Atoms.txt
 *.png
 *.data
 *.dump
+*.pyc
 __pycache__

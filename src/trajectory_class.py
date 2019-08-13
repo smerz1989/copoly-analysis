@@ -3,6 +3,7 @@ related to molecules.  This includes Bond, Angle, and Dihedral classes as well a
 
 """
 from itertools import groupby, permutations
+import itertools
 import networkx as ntwkx
 import numpy as np
 from math import *
@@ -202,7 +203,7 @@ class Angle(object):
         return not self.__eq__(other)
 
 
-def load_bond_trajectory(filename):
+def load_bond_trajectory_old(filename):
     d = dump(filename)
     times = d.time()
     bond_snapshots = {}
@@ -214,6 +215,12 @@ def load_bond_trajectory(filename):
         bond_snapshots[timestep]=bonds
     return(bond_snapshots)
 
+def load_bond_trajectory(bdump):
+    times = bdump.time()
+    for timestep in times:
+        b_type,batom1,batom2 = bdump.vecs(timestep,"c_bcomp[1]","c_bcomp[2]","c_bcomp[3]")
+        bonds = np.concatenate((np.array(b_type)[:,np.newaxis],np.array(batom1)[:,np.newaxis],np.array(batom2)[:,np.newaxis]),axis=1)
+        yield((timestep,bonds))
 
 def set_anchor_atoms(molecules,anchortype):
     """For every molecule in molecules set the anchot atom to the atom with atom type anchortype.
@@ -243,14 +250,13 @@ def construct_molecule_trajectory(datafile,bondtrajectory):
     molecules : Molecule List
         A list of Molecule objects with the data specified by the LAMMPS input file passed in.
     """
-    print("Loading Data File:")
+    #print("Loading Data File:")
     atoms = loadAtoms(datafile)
-    bonds = load_bond_trajectory(bondtrajectory)
-    snapshots = {}
-    for timestep in bonds:
-        print("Processing timestep: {}".format(timestep))
-        snapshots[timestep] = SimulationSnapshot(atoms,bonds[timestep])
-    return snapshots
+    #bondtrajectory = dump(bdump)
+    bond_snapshots = load_bond_trajectory(bondtrajectory)
+    for timestep, bonds in bond_snapshots:
+        #print("Processing timestep: {}".format(timestep))
+        yield((timestep,SimulationSnapshot(atoms,bonds)))
 
 
 def rot_quat(vector,theta,rot_axis):
@@ -301,22 +307,17 @@ class SimulationSnapshot(object):
     bonds : list of type Bond
         A list of all bonds within the simulation snapshot.
     """ 
-    def __init__(self,atoms,bonds):
+    def __init__(self,atoms,bonds,anchor_atom_type=8):
         self.atoms = {atom.atomID: atom for atom in atoms}
         self.bonds = bonds
-        self.anchor_atoms = {}
+        self.anchor_atoms = {atomID: self.atoms[atomID] for atomID in self.atoms if self.atoms[atomID].atomType==anchor_atom_type}
         self.topology = self.create_topology_network()
         self.chain_lengths = self.get_chain_lengths()
-        #self.chains = ntwkx.connected_components(self.topology)
     
     def create_topology_network(self,anchor_atom_type=8):
         G = ntwkx.Graph()
-        for atom in self.atoms:
-            G.add_node(atom)
-            if self.atoms[atom].atomType==anchor_atom_type:
-                self.anchor_atoms[atom]=self.atoms[atom]
-        ntwkx.set_node_attributes(G,self.atoms,name="Atom")
-        G.add_edges_from([(self.bonds[bond].atom1,self.bonds[bond].atom2) for bond in self.bonds])
+        G.add_nodes_from([(atomID,{'Atom':self.atoms[atomID]}) for atomID in self.atoms])
+        G.add_edges_from(zip(self.bonds[:,1],self.bonds[:,2]))
         return(G)
   
     def get_number_chains(self):
@@ -327,6 +328,29 @@ class SimulationSnapshot(object):
 
     def get_chain_lengths(self):
         return([len(chain)/3 for chain in ntwkx.connected_components(self.topology)]) 
+
+    def get_monomer_type(self,monomer):
+        node_types = [self.topology.nodes[node]['Atom'].atomType for node in monomer]
+        unique_types, type_counts = np.unique(np.array(node_types),return_counts=True)
+        return(unique_types[type_counts==1])
+
+    def unravel_chain_generator(self,chain_generator):
+        [chainnode for node in chain_generator]
+
+    def get_monomer_type_fraction(self,atom_type=3):
+        #import pdb;pdb.set_trace()
+        monomers = [list(chain) for chain in ntwkx.connected_components(self.topology) if len(chain)==3]
+        atoms = np.array(monomers).flatten()
+        atom_types = [self.topology.nodes[atom]['Atom'].atomType for atom in atoms]
+        types, counts = np.unique(atom_types,return_counts=True)
+        return(counts[types==atom_type][0]/len(monomers))
+
+    def get_chain_type_fraction(self,atom_type=3):
+        chains = [list(chain.nodes(data=True)) for chain in ntwkx.connected_components(self.topology) if len(chain)>3]
+        atoms = itertools.chain(chains)
+        atom_types = [atom[1]['atom'] for atom in atoms]
+        types, counts = np.unique(atom_types,return_counts=True)
+        return(counts[types==atom_type])
 
     def get_dop(self):
         return(np.mean([length for length in self.chain_lengths if length>0.5]))
