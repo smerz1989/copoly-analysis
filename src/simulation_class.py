@@ -18,6 +18,9 @@ class Simulation(object):
         sb.call([packmol_path],stdin=open('np.inp'))
         os.chdir(self.lt_dir)
         sb.call(["moltemplate.sh","-xyz",self.xyz_dir+"/np.xyz","-atomstyle","angle","system.lt"])
+        sb.call(["sed","-i",'s/a\\"/a\\"\ extra\/special\/per\/atom\ 4\ extra\/bond\/per\/atom\ 2\ extra\/angle\/per\/atom\ 2/g',"system.in"])
+        sb.call(["sed","-i",'s/\!\(.*\)\!/\$\{\\1\}/g',"system.in.run"])
+        sb.call(["sed","-i",'s/\!(\(.*\))/\$(\\1)/g',"system.in.run"])
 
     def change_monomer_count(self):
         curr_dir = os.path.abspath('.')
@@ -40,4 +43,5 @@ class Simulation(object):
             shutil.copy(simfile,os.path.abspath(dest_folder))
         for simfile in glob.glob(r''+self.lt_dir+'/*.txt'):
             shutil.copy(simfile,os.path.abspath(dest_folder))
+        shutil.copy("submit.sbatch",dest_folder)
 
