@@ -44,12 +44,12 @@ with tqdm(total=500,ascii=True) as pbar:
         pbar.update(1)
 
 
-mon_df = pd.DataFrame(list(zip(timesteps,number_of_monomers,dop,pdi,extentr,pAA,pBB,pAB,monomer_fraction)),columns=['timestep','nmonomers','dop','pdi','p','pAA','pBB','pAB','mfraction'])
+mon_df = pd.DataFrame(list(zip(timesteps,number_of_monomers,dop,pdi,extentr,pAA,pBB,pAB,monomer_fraction,1-np.array(monomer_fraction))),columns=['timestep','nmonomers','dop','pdi','p','pAA','pBB','pAB','afraction','bfraction'])
 
 
 sns.set_style("ticks")
 fig = plt.figure(figsize=(18,24))
-gs1 = gridspec.GridSpec(nrows=8,ncols=6,left=0.2,right=0.9,bottom=0.5,wspace=0.75,hspace=0.75)
+gs1 = gridspec.GridSpec(nrows=11,ncols=6,left=0.2,right=0.9,bottom=0.5,wspace=0.75,hspace=0.75)
 
 #fig.set_size_inches(24.5,18)
 
@@ -69,12 +69,12 @@ for i,prob in enumerate(prob_names):
     axis.set_ylim(0.,0.5)
     sns.relplot(x='timestep',y=prob,kind="line",data=mon_df,ax=axis)
 
-#mapaxis = fig.add_subplot(gs1[6:9,0:3])
-#mapaxis.set_ylim([0.,1.])
-#mbpaxis = fig.add_subplot(gs1[6:9,3:6])
-#mbpaxis.set_ylim([0.,1.])
-#sns.relplot(x='timestep',y='mfraction',kind="line",data=mon_df,ax=mapaxis)
-#sns.relplot(x='timestep',y=1-'mfraction',kind="line",data=mon_df,ax=mbpaxis)
+mapaxis = fig.add_subplot(gs1[8:11,0:3])
+mapaxis.set_ylim([0.,1.])
+mbpaxis = fig.add_subplot(gs1[8:11,3:6])
+mbpaxis.set_ylim([0.,1.])
+sns.relplot(x='timestep',y='afraction',kind="line",data=mon_df,ax=mapaxis)
+sns.relplot(x='timestep',y='bfraction',kind="line",data=mon_df,ax=mbpaxis)
 
 
 fig.savefig('monomer_plot.png')
