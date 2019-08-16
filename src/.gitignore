@@ -3,4 +3,5 @@ Atoms.txt
 *.data
 *.dump
 *.pyc
+*.sbatch
 __pycache__

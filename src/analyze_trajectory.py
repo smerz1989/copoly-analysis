@@ -45,7 +45,7 @@ with tqdm(total=500,ascii=True) as pbar:
 
 
 mon_df = pd.DataFrame(list(zip(timesteps,number_of_monomers,dop,pdi,extentr,pAA,pBB,pAB,monomer_fraction,1-np.array(monomer_fraction))),columns=['timestep','nmonomers','dop','pdi','p','pAA','pBB','pAB','afraction','bfraction'])
-
+mon_df.to_csv('traj_analysis.csv')
 
 sns.set_style("ticks")
 fig = plt.figure(figsize=(18,24))
