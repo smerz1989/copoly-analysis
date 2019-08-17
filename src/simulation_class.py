@@ -34,6 +34,11 @@ class Simulation(object):
         sb.call(["sed","-i",'/\@atom\:B\ \@atom\:B/ s/twopiece\ [0-9]\?\.\?[0-9]\?/twopiece\ '+str(self.eBB)+'/g','copolyff.lt'])
         os.chdir(cur_path)
 
+    def change_extent_of_reaction(self):
+        cur_path = os.path.abspath('.')
+        os.chdir(self.lt_dir)
+        sb.call(["sed","-i",'/if\ \\"/ s/\>\ ?[0-9]?\.?[0-9]?[0-9]?/\>\ '+str(self.p)+'/g'])
+        os.chdir(cur_path)
 
     def change_monomer_count(self):
         curr_dir = os.path.abspath('.')
