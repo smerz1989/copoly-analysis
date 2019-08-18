@@ -6,6 +6,11 @@ import subprocess as sb
 import re
 
 
+class CopolyJob(object):
+    def __init__(self,directory):
+        print("Placeholder")
+
+
 def get_job_statuses(slurm_numbers):
     job_statuses = sb.check_output(["squeue","-j",",".join([jobid for jobid in slurm_numbers])]).decode('utf-8').split('\n')
     return(job_status) 
