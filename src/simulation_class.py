@@ -80,15 +80,18 @@ class Simulation(object):
             shutil.copy("submit.sbatch",dest_folder)
 
     def move_simulation_files_remote(self,dest_folder,slurm):
-        self.dest_folder = dest_folder
-        if not self.server_connection.check_if_file_exists(dest_folder):
-            self.server_connection.mkdir(dest_folder)
+        self.dest_folder = dest_folder+'/copoly_{}monomers_{}percentA_{}epsAA_{}epsBB_{}epsAB'.format(self.total_monomers,
+                                                                                                 int(100*self.monomer_A_fraction),
+                                                                                                    self.eAA,self.eBB,self.eAB)
+        print("Moving files to directory: {}".format(self.dest_folder))
+        if not self.server_connection.check_if_file_exists(self.dest_folder):
+            self.server_connection.mkdir(self.dest_folder)
         for simfile in glob.glob(r''+self.lt_dir+'/system.*'):
-            self.server_connection.send_file(simfile,dest_folder+'/'+os.path.basename(simfile))
+            self.server_connection.send_file(simfile,self.dest_folder+'/'+os.path.basename(simfile))
         for simfile in glob.glob(r''+self.lt_dir+'/*.txt'):
-            self.server_connection.send_file(simfile,dest_folder+'/'+os.path.basename(simfile))
+            self.server_connection.send_file(simfile,self.dest_folder+'/'+os.path.basename(simfile))
         if slurm:
-            self.server_connection.send_file(self.lt_dir+"submit.sbatch",dest_folder+'/submit.sbatch')
+            self.server_connection.send_file(self.lt_dir+"submit.sbatch",self.dest_folder+'/submit.sbatch')
 
     def analyze_simulation(self):
         print("placeholder")
@@ -104,7 +107,7 @@ class Simulation(object):
 
 
     def start_simulation_remote(self):
-        stdin, stdout, stderr = self.server_connection.ssh_client.exec_command('cd {} \n sbatch submit.sbatch'.format(self.dest_folder))
+        stdin, stdout, stderr = self.server_connection.ssh_client.exec_command('cd {} \n sbatch submit.sbatch \n'.format(self.dest_folder))
         submit_status = stdout.read().decode('utf-8')
         print(submit_status)
         self.jobID = int(re.search(r'[0-9]+',submit_status).group(0))

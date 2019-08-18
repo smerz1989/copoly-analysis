@@ -33,7 +33,7 @@ class ServerConnection(object):
             print("Directory already exists")
             raise OSError
         else:
-            self.ssh_client.exec_command('mkdir '+str(path))
+            self.ssh_client.exec_command('mkdir -p '+str(path))
 
     def send_file(self,local_path,remote_path):
         ftp_client = self.ssh_client.open_sftp()
