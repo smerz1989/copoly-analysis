@@ -13,8 +13,8 @@ class Simulation(object):
         self.monomer_A_fraction = monomer_A_fraction
         self.p = p
         self.dump_frequency = dump_frequency
-        self.lt_dir = lt_dir
-        self.xyz_dir = xyz_dir
+        self.lt_dir = os.path.abspath(lt_dir)
+        self.xyz_dir = os.path.abspath(xyz_dir)
         self.eAA,self.eBB,self.eAB = monomer_attractions
         self.send_to_cluster=send_to_cluster
         if self.send_to_cluster:
@@ -91,7 +91,7 @@ class Simulation(object):
         for simfile in glob.glob(r''+self.lt_dir+'/*.txt'):
             self.server_connection.send_file(simfile,self.dest_folder+'/'+os.path.basename(simfile))
         if slurm:
-            self.server_connection.send_file(self.lt_dir+"submit.sbatch",self.dest_folder+'/submit.sbatch')
+            self.server_connection.send_file(self.lt_dir+"/submit.sbatch",self.dest_folder+'/submit.sbatch')
 
     def analyze_simulation(self):
         print("placeholder")
