@@ -10,6 +10,7 @@ from math import *
 from dump import dump
 from subprocess import call, check_output
 import re
+import igraph
 
 class Molecule(object):
     """This class is used to represent a molecule in a simulation and holds all
@@ -312,12 +313,21 @@ class SimulationSnapshot(object):
         self.bonds = bonds
         self.anchor_atoms = {atomID: self.atoms[atomID] for atomID in self.atoms if self.atoms[atomID].atomType==anchor_atom_type}
         self.topology = self.create_topology_network()
-        self.chain_lengths = self.get_chain_lengths()
-    
+        self.molecules = list(self.topology.components())
+        #self.molecules = [self.topology.subgraph(molecule) for molecule in ntwkx.connected_components(self.topology)]
+        self.chain_lengths = [int(len(molecule)/3) for molecule in self.molecules]
+           
+ 
     def create_topology_network(self,anchor_atom_type=8):
-        G = ntwkx.Graph()
-        G.add_nodes_from([(atomID,{'Atom':self.atoms[atomID]}) for atomID in self.atoms])
-        G.add_edges_from(zip(self.bonds[:,1],self.bonds[:,2]))
+        #G = ntwkx.Graph()
+        #G.add_nodes_from([(atomID,{'Atom':self.atoms[atomID]}) for atomID in self.atoms])
+        #G.add_edges_from(zip(self.bonds[:,1],self.bonds[:,2]))
+        G = igraph.Graph()
+        nodes = list(self.atoms.keys())
+        atom_attributes = list(self.atoms.values())
+        G.add_vertices(nodes)
+        G.vs["Atom"] = atom_attributes
+        G.add_edges(zip(self.bonds[:,1],self.bonds[:,2]))
         return(G)
   
     def get_number_chains(self):
@@ -338,15 +348,16 @@ class SimulationSnapshot(object):
         [chainnode for node in chain_generator]
 
     def get_monomer_type_fraction(self,atom_type=3):
-        #import pdb;pdb.set_trace()
-        monomers = [list(chain) for chain in ntwkx.connected_components(self.topology) if len(chain)==3]
+        #monomers = [list(chain) for chain in ntwkx.connected_components(self.topology) if len(chain)==3]
+        monomers = [list(molecule) for molecule in self.molecules if len(molecule)==3]
         atoms = np.array(monomers).flatten()
         atom_types = [self.topology.nodes[atom]['Atom'].atomType for atom in atoms]
         types, counts = np.unique(atom_types,return_counts=True)
         return(counts[types==atom_type][0]/len(monomers))
 
     def get_chain_type_fraction(self,atom_type=3):
-        chains = [list(chain.nodes(data=True)) for chain in ntwkx.connected_components(self.topology) if len(chain)>3]
+        #chains = [list(chain.nodes(data=True)) for chain in ntwkx.connected_components(self.topology) if len(chain)>3]
+        chains = [list(chain.nodes(data=True)) for chain in self.chains if len(chains)>3]
         atoms = itertools.chain(chains)
         atom_types = [atom[1]['atom'] for atom in atoms]
         types, counts = np.unique(atom_types,return_counts=True)
@@ -356,9 +367,14 @@ class SimulationSnapshot(object):
         return(np.mean([length for length in self.chain_lengths if length>0.5]))
 
     def get_pdi(self):
-        chain_lengths = self.get_chain_lengths()
-        n_ave = np.mean([length for length in chain_lengths if length>1])
-        m_ave = np.mean([(length)**2 for length in chain_lengths if length>1]) 
+        #chain_lengths = self.get_chain_lengths()
+        #n_ave = np.mean([length for length in self.chain_lengths if length>1])
+        #m_ave = np.mean([(length)**2 for length in chain_lengths if length>1])
+        length_length2 = np.array([[length,length**2] for length in self.chain_lengths if length>1])
+        if len(length_length2):
+            n_ave, m_ave = (np.mean(length_length2,axis=0)[0], np.mean(length_length2,axis=0)[1])
+        else:
+            n_ave, m_ave = (1,1)
         return(m_ave/n_ave)
     
     def get_chain_sequence(self,chain):

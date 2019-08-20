@@ -35,6 +35,10 @@ class ServerConnection(object):
         else:
             self.ssh_client.exec_command('mkdir -p '+str(path))
 
+    def lsdir(self,path):
+        ftp_client = self.ssh_client.open_sftp()
+        return(ftp_client.listdir(path))
+
     def send_file(self,local_path,remote_path):
         ftp_client = self.ssh_client.open_sftp()
         print("Transferring file: {} to server".format(local_path))
@@ -43,7 +47,7 @@ class ServerConnection(object):
 
     def get_file(self,remote_path,local_path):
         ftp_client = self.ssh_client.open_sftp()
-        ftp_client.put(remote_path,local_path,callback=self.print_progress)
+        ftp_client.get(remote_path,local_path,callback=self.print_progress)
         print('Transfer Completed\n')
         ftp_client.close()
 
