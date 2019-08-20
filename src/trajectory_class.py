@@ -220,7 +220,7 @@ def load_bond_trajectory(bdump):
     times = bdump.time()
     for timestep in times:
         b_type,batom1,batom2 = bdump.vecs(timestep,"c_bcomp[1]","c_bcomp[2]","c_bcomp[3]")
-        bonds = np.concatenate((np.array(b_type)[:,np.newaxis],np.array(batom1)[:,np.newaxis],np.array(batom2)[:,np.newaxis]),axis=1)
+        bonds = np.concatenate((np.array(b_type)[:,np.newaxis],np.array(batom1)[:,np.newaxis],np.array(batom2)[:,np.newaxis]),axis=1).astype(int)
         yield((timestep,bonds))
 
 def set_anchor_atoms(molecules,anchortype):
@@ -252,12 +252,12 @@ def construct_molecule_trajectory(datafile,bondtrajectory):
         A list of Molecule objects with the data specified by the LAMMPS input file passed in.
     """
     #print("Loading Data File:")
-    atoms = loadAtoms(datafile)
+    atoms,atoms_array = loadAtoms(datafile)
     #bondtrajectory = dump(bdump)
     bond_snapshots = load_bond_trajectory(bondtrajectory)
     for timestep, bonds in bond_snapshots:
         #print("Processing timestep: {}".format(timestep))
-        yield((timestep,SimulationSnapshot(atoms,bonds)))
+        yield((timestep,SimulationSnapshot(atoms,bonds,atoms_array)))
 
 
 def rot_quat(vector,theta,rot_axis):
@@ -308,39 +308,42 @@ class SimulationSnapshot(object):
     bonds : list of type Bond
         A list of all bonds within the simulation snapshot.
     """ 
-    def __init__(self,atoms,bonds,anchor_atom_type=8):
-        self.atoms = {atom.atomID: atom for atom in atoms}
+    def __init__(self,atoms,bonds,atoms_array=None,anchor_atom_type=8):
+        self.atoms = {atom.atomID: atom for atom in atoms if not atom.atomType==1}
         self.bonds = bonds
         self.anchor_atoms = {atomID: self.atoms[atomID] for atomID in self.atoms if self.atoms[atomID].atomType==anchor_atom_type}
-        self.topology = self.create_topology_network()
-        self.molecules = list(self.topology.components())
+        self.topology = self.create_topology_network(atoms_array,self.bonds)
+        #self.molecules = [molecule for molecule in self.topology.decompose()]
+        self.molecules = list(self.topology.decompose())
+        self.monomers = [molecule for molecule in self.molecules if len(molecule.vs)==3]
+        self.chains = [molecule for molecule in self.molecules if len(molecule.vs)>3]
         #self.molecules = [self.topology.subgraph(molecule) for molecule in ntwkx.connected_components(self.topology)]
-        self.chain_lengths = [int(len(molecule)/3) for molecule in self.molecules]
+        self.chain_lengths = [int(len(molecule.vs)/3) for molecule in self.molecules]
            
  
-    def create_topology_network(self,anchor_atom_type=8):
-        #G = ntwkx.Graph()
-        #G.add_nodes_from([(atomID,{'Atom':self.atoms[atomID]}) for atomID in self.atoms])
-        #G.add_edges_from(zip(self.bonds[:,1],self.bonds[:,2]))
+    def create_topology_network(self,atoms, bonds, anchor_atom_type=8):
         G = igraph.Graph()
         nodes = list(self.atoms.keys())
         atom_attributes = list(self.atoms.values())
         G.add_vertices(nodes)
         G.vs["Atom"] = atom_attributes
-        G.add_edges(zip(self.bonds[:,1],self.bonds[:,2]))
+        min_node = np.min(G.vs['name'])
+        #bonds = [(int(bond1)-1,int(bond2)-1) for bond1,bond2 in zip(self.bonds[:,1],self.bonds[:,2])]
+        G.add_edges(zip(bonds[:,1]-min_node,self.bonds[:,2]-min_node))
         return(G)
-  
+    
     def get_number_chains(self):
         return(len([length for length in self.chain_lengths if length>1]))
 
     def get_number_monomers(self):
         return(len([length for length in self.chain_lengths if length==1]))
 
-    def get_chain_lengths(self):
-        return([len(chain)/3 for chain in ntwkx.connected_components(self.topology)]) 
+    #def get_chain_lengths(self):
+    #    return([len(chain)/3 for chain in ntwkx.connected_components(self.topology)]) 
 
     def get_monomer_type(self,monomer):
-        node_types = [self.topology.nodes[node]['Atom'].atomType for node in monomer]
+        #node_types = [self.topology.nodes[node]['Atom'].atomType for node in monomer]
+        node_types = [node['Atom'].atomType for node in self.topology.vs]
         unique_types, type_counts = np.unique(np.array(node_types),return_counts=True)
         return(unique_types[type_counts==1])
 
@@ -349,17 +352,17 @@ class SimulationSnapshot(object):
 
     def get_monomer_type_fraction(self,atom_type=3):
         #monomers = [list(chain) for chain in ntwkx.connected_components(self.topology) if len(chain)==3]
-        monomers = [list(molecule) for molecule in self.molecules if len(molecule)==3]
+        monomers = [molecule.vs for molecule in self.monomers]
         atoms = np.array(monomers).flatten()
-        atom_types = [self.topology.nodes[atom]['Atom'].atomType for atom in atoms]
+        atom_types = [atom['Atom'].atomType for atom in atoms]
         types, counts = np.unique(atom_types,return_counts=True)
         return(counts[types==atom_type][0]/len(monomers))
 
     def get_chain_type_fraction(self,atom_type=3):
         #chains = [list(chain.nodes(data=True)) for chain in ntwkx.connected_components(self.topology) if len(chain)>3]
-        chains = [list(chain.nodes(data=True)) for chain in self.chains if len(chains)>3]
+        chains = [chain.vs['Atom'] for chain in self.chains]
         atoms = itertools.chain(chains)
-        atom_types = [atom[1]['atom'] for atom in atoms]
+        atom_types = [atom.atomType for atom in atoms]
         types, counts = np.unique(atom_types,return_counts=True)
         return(counts[types==atom_type])
 
@@ -378,12 +381,15 @@ class SimulationSnapshot(object):
         return(m_ave/n_ave)
     
     def get_chain_sequence(self,chain):
-        sequence = ' '.join([str(self.topology.nodes[node]['Atom'].atomType) for node in chain])
+        #sequence = ' '.join([str(self.topology.nodes[node]['Atom'].atomType) for node in chain])
+        sequence = ' '.join([str(atom['Atom'].atomType) for atom in chain])
         return(sequence)
 
     def get_sequence_probs(self,sequence,filter_atom_type=(5,6,7),a_type_id=3,b_type_id=4):
+        #import pdb;pdb.set_trace()
         filter_str = r'['+','.join([str(atom_type) for atom_type in filter_atom_type])+']\ ?'
-        filtered_seq = re.sub(filter_str,"",sequence).strip()
+        str_sequence = self.get_chain_sequence(sequence)
+        filtered_seq = re.sub(filter_str,"",str_sequence).strip()
         filtered_seq = re.sub(r'\ ',"",filtered_seq)
         numAA = len(re.findall(r'(?='+str(a_type_id)*2+')',filtered_seq))
         numBB = len(re.findall(r'(?='+str(b_type_id)*2+')',filtered_seq)) 
@@ -394,11 +400,12 @@ class SimulationSnapshot(object):
         sequences = self.get_sequences()
         chain_counts = zip(*[self.get_sequence_probs(seq) for seq in sequences])
         chain_sums = [sum(count) for count in chain_counts]
-        chain_probs = np.array(chain_sums)/sum(chain_sums)
+        chain_probs = np.array(chain_sums)/sum(chain_sums) if sum(chain_sums)>0 else (0,0,0) 
         return(chain_probs) 
 
     def get_sequences(self):
-        sequences = [self.get_chain_sequence(ntwkx.dfs_preorder_nodes(self.topology,anchor)) for anchor in self.anchor_atoms]
+        #sequences = [self.get_chain_sequence(ntwkx.dfs_preorder_nodes(self.topology,anchor)) for anchor in self.anchor_atoms]
+        sequences = [self.topology.bfsiter(anchor) for anchor in self.anchor_atoms]
         return(sequences) 
 
 
@@ -461,7 +468,7 @@ def loadAtoms(filename,style="angle"):
     atoms_array = np.loadtxt("tmp.out",skiprows=1)
     call(["rm","tmp.out"])
     atom_list = [Atom(atom[0],atom[1],atom[2],0.,atom[3:6]) for atom in atoms_array]
-    return atom_list
+    return (atom_list,atoms_array)
 
 
 
