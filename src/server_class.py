@@ -47,12 +47,14 @@ class ServerConnection(object):
 
     def get_file(self,remote_path,local_path):
         ftp_client = self.ssh_client.open_sftp()
+        print("Downloading file: {} from server".format(local_path))
         ftp_client.get(remote_path,local_path,callback=self.print_progress)
-        print('Transfer Completed\n')
+        sys.stdout.write('\n')
+        sys.stdout.flush()
         ftp_client.close()
 
     def print_progress(self,transferred, toBeTransferred):
         progress = transferred/int(toBeTransferred)*100
-        print("{}% transferred of {} bytes to be transferred".format(progress,toBeTransferred))
-        #sys.stdout.write('\rTransfer Progress: %.2f %%' % (res))
-        #sys.stdout.flush()
+        #print("{}% transferred of {} bytes to be transferred".format(progress,toBeTransferred))
+        sys.stdout.write('\rTransfer Progress: %.2f %%' % (progress))
+        sys.stdout.flush()
