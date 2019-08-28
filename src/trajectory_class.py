@@ -462,6 +462,27 @@ def loadAtoms(filename,style="angle"):
     return (atom_list,atoms_array.astype(int))
 
 
+def loadBonds(filename,style="angle"):
+    """Loads the atoms from a LAMMPS  input file and returns a list of Atom object which represent those atoms.
+    
+    Parameters
+    ----------
+    filename : str
+        The name of the LAMMPS input file which contain the atoms
+
+    Returns
+    -------
+    Atom List
+        A list of Atom objects which contains the atom info in the given LAMMPS input file.
+    """
+    with open('tmp.out','w') as temp_file:
+        call(["awk",'/Bonds/{flag=1;next}/Angles/{flag=0}flag',filename],stdout=temp_file)
+    bonds_array = np.loadtxt("tmp.out",skiprows=1,dtype=int)
+    call(["rm","tmp.out"])
+    #atom_list = [Atom(atom[0],atom[1],atom[2],0.,atom[3:6]) for atom in atoms_array]
+    return(bonds_array)
+
+
 
 
 
