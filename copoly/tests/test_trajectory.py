@@ -3,26 +3,27 @@ import os, sys
 import subprocess as sb
 import numpy as np
 
-sys.path.append('../')
+#sys.path.append('../')
 
-from dump import dump
-import trajectory_class as tjc
+from copoly.dump import dump
+import copoly.trajectory_class as tjc
 
 class TestSimulationSnapshot(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         super(TestSimulationSnapshot, cls).setUpClass()
-        cls.trajfileAABB = os.path.abspath('./test_files/simulation_snapshots/lts/poly.lammpstrj')
-        cls.bondsfileAABB = os.path.abspath('./test_files/simulation_snapshots/lts/bonddump.dump')
-        cls.dataAABB = os.path.abspath('./test_files/simulation_snapshots/lts/system.data')
+        test_location = os.path.dirname(os.path.abspath(__file__))
+        cls.trajfileAABB = os.path.abspath(test_location+'/test_files/simulation_snapshots/lts/poly.lammpstrj')
+        cls.bondsfileAABB = os.path.abspath(test_location+'/test_files/simulation_snapshots/lts/bonddump.dump')
+        cls.dataAABB = os.path.abspath(test_location+'/test_files/simulation_snapshots/lts/system.data')
         cls.trajAABB = dump(cls.trajfileAABB)
         cls.bondsAABB = dump(cls.bondsfileAABB)
         cls.snapshots_AABB = tjc.construct_molecule_trajectory(cls.dataAABB,cls.bondsAABB,cls.trajAABB)
         cls.timestep1, cls.snapshot1_AABB = next(cls.snapshots_AABB)
-        cls.trajfileABAB = os.path.abspath('./test_files/simulation_snapshots/ABAB/poly.lammpstrj')
-        cls.bondsfileABAB = os.path.abspath('./test_files/simulation_snapshots/ABAB/bonddump.dump')
-        cls.dataABAB = os.path.abspath('./test_files/simulation_snapshots/ABAB/system.data')
+        cls.trajfileABAB = os.path.abspath(test_location+'/test_files/simulation_snapshots/ABAB/poly.lammpstrj')
+        cls.bondsfileABAB = os.path.abspath(test_location+'/test_files/simulation_snapshots/ABAB/bonddump.dump')
+        cls.dataABAB = os.path.abspath(test_location+'/test_files/simulation_snapshots/ABAB/system.data')
         cls.trajABAB = dump(cls.trajfileABAB)
         cls.bondsABAB = dump(cls.bondsfileABAB)
         cls.snapshots_ABAB = tjc.construct_molecule_trajectory(cls.dataABAB,cls.bondsABAB,cls.trajABAB)

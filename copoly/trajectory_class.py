@@ -7,7 +7,7 @@ import itertools
 import networkx as ntwkx
 import numpy as np
 from math import *
-from dump import dump
+from copoly.dump import dump
 from subprocess import call, check_output
 import re
 import igraph
