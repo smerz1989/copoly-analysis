@@ -3,6 +3,7 @@ Atoms.txt
 *.data
 *.dump
 !copoly/tests/test_files/**/*.dump
+!copoly/tests/test_files/**/*.data
 *.pyc
 *.sbatch
 output_ttree
