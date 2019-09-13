@@ -3,8 +3,8 @@ import dump as dump
 import mdtraj
 import argparse
 import pandas as pd
-import nglview
-from nglview.contrib.movie import MovieMaker
+#import nglview
+#from nglview.contrib.movie import MovieMaker
 import subprocess as sb
 
 parser = argparse.ArgumentParser(description='Script for modifying, compiling lt and xyz template files and copying the LAMMPS input script output into a standalone simulation folder')

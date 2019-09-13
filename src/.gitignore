@@ -4,4 +4,5 @@ Atoms.txt
 *.dump
 *.pyc
 *.sbatch
+output_ttree
 __pycache__
