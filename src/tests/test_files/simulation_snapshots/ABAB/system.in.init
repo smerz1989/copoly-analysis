@@ -1,0 +1,6 @@
+        units lj
+        atom_style angle
+        pair_style hybrid lj/expand/twopiece 2.5 soft/shift 0.3 zero 1 morse 2.5
+        bond_style hybrid harmonic
+        angle_style hybrid harmonic
+        special_bonds lj 0.0 0.0 0.0

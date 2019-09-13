@@ -1,0 +1,16 @@
+import "copolyff.lt"
+
+ABEAD{
+    write("Data Atoms"){
+        $atom:SA1 $mol:. @atom:COPOLYFF/SA 0. -0.5 0.
+        $atom:A $mol:. @atom:COPOLYFF/A 0. 0. 0.
+        $atom:SA2 $mol:. @atom:COPOLYFF/SA 0. 0.5 0.
+    }
+    write("Data Bonds"){
+        $bond:SA1A @bond:COPOLYFF/ASA $atom:SA1 $atom:A
+        $bond:ASA2 @bond:COPOLYFF/ASA $atom:A   $atom:SA2
+    }
+    write("Data Angles"){
+        $angle:SAASA @angle:COPOLYFF/SAASA $atom:SA1 $atom:A $atom:SA2
+    }
+}

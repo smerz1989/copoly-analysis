@@ -11,6 +11,8 @@ from dump import dump
 from subprocess import call, check_output
 import re
 import igraph
+import subprocess as sb
+import pandas as pd
 
 class Molecule(object):
     """This class is used to represent a molecule in a simulation and holds all
@@ -223,6 +225,19 @@ def load_bond_trajectory(bdump):
         bonds = np.concatenate((np.array(b_type)[:,np.newaxis],np.array(batom1)[:,np.newaxis],np.array(batom2)[:,np.newaxis]),axis=1).astype(int)
         yield((timestep,bonds))
 
+def load_atom_trajectory(adump):
+    times = adump.time()
+    for timestep in times:
+        #adump.unscale(timestep)
+        adump.sort(timestep)
+        a_id,a_type,xs,ys,zs = adump.vecs(timestep,"id","type","x","y","z")
+        atom_coords = np.concatenate((np.array(a_id)[:,np.newaxis],
+                               np.array(a_type)[:,np.newaxis],
+                               np.array(xs)[:,np.newaxis],
+                               np.array(ys)[:,np.newaxis],
+                               np.array(zs)[:,np.newaxis]),axis=1).astype(float)
+        yield((timestep,atom_coords))
+
 def set_anchor_atoms(molecules,anchortype):
     """For every molecule in molecules set the anchot atom to the atom with atom type anchortype.
 
@@ -238,7 +253,7 @@ def set_anchor_atoms(molecules,anchortype):
         if len(anchorIDs)>0:
             molecule.setAnchorAtom(anchorIDs[0])
 
-def construct_molecule_trajectory(datafile,bondtrajectory):
+def construct_molecule_trajectory(datafile,bondtrajectory,atomtrajectory=None):
     """From a LAMMPS input file construct a list of Molecule objects based on the molecules in the LAMMPS input file.
 
     Parameters
@@ -255,9 +270,14 @@ def construct_molecule_trajectory(datafile,bondtrajectory):
     atoms,atoms_array = loadAtoms(datafile)
     #bondtrajectory = dump(bdump)
     bond_snapshots = load_bond_trajectory(bondtrajectory)
+    atom_snapshots = None if atomtrajectory is None else load_atom_trajectory(atomtrajectory)
     for timestep, bonds in bond_snapshots:
         #print("Processing timestep: {}".format(timestep))
-        yield((timestep,SimulationSnapshot(atoms,bonds,atoms_array)))
+        if not atom_snapshots is None:
+            timestep,atom_coords = next(atom_snapshots)
+        else:
+            atom_coords=None
+        yield((timestep,SimulationSnapshot(atoms,bonds,atoms_array,atom_coords=atom_coords)))
 
 
 def rot_quat(vector,theta,rot_axis):
@@ -289,8 +309,6 @@ def rot_quat(vector,theta,rot_axis):
     return new_vector[1:]*vector_mag
 
 def quat_mult(q1,q2):
-    w1,x1,y1,z1 = q1
-    w2,x2,y2,z2 = q2
     w = w1*w2-x1*x2-y1*y2-z1*z2
     x = w1*x2 + x1*w2 + y1*z2 - z1*y2
     y = w1*y2 + y1*w2 + z1*x2 - x1*z2
@@ -308,17 +326,78 @@ class SimulationSnapshot(object):
     bonds : list of type Bond
         A list of all bonds within the simulation snapshot.
     """ 
-    def __init__(self,atoms,bonds,atoms_array=None,anchor_atom_type=8):
+    def __init__(self,atoms,bonds,atoms_array=None,atom_coords=None,anchor_atom_type=8):
         self.atoms = {atom.atomID: atom for atom in atoms if not atom.atomType==1}
         self.bonds = bonds
-        #self.anchor_atoms = {atomID: self.atoms[atomID] for atomID in self.atoms if self.atoms[atomID].atomType==anchor_atom_type}
+        self.atoms_array = atoms_array
+        if not atom_coords is None:
+            self.atoms_array[:,3:6]=atom_coords[:,2:5]
         self.anchor_atoms = atoms_array[atoms_array[:,2]==anchor_atom_type]
         self.topology = self.create_topology_network(atoms_array,self.bonds)
         self.molecules = list(self.topology.components())
+        self.relabel_molecules()
         self.monomers = [molecule for molecule in self.molecules if len(molecule)==3]
         self.chains = [molecule for molecule in self.molecules if len(molecule)>3]
         self.chain_lengths = [int(len(molecule)/3) for molecule in self.molecules]
-           
+    
+    def guess_simulation_bounds(self):
+        xmin,xmax = (np.amin(self.atoms_array[:,3]),np.amax(self.atoms_array[:,3]))
+        ymin,ymax = (np.amin(self.atoms_array[:,4]),np.amax(self.atoms_array[:,4]))
+        zmin,zmax = (np.amin(self.atoms_array[:,5]),np.amax(self.atoms_array[:,5]))
+        return(np.array([[xmin,xmax],[ymin,ymax],[zmin,zmax]]))
+
+    def relabel_molecules(self):
+        for i,molecule in enumerate(self.molecules):
+            self.atoms_array[molecule+self.min_node-1,1]=i+self.min_node
+
+    def unwrap_molecules(self,bounds):
+        for molecule in self.molecules:
+            coords = self.atoms_array[molecule+self.min_node-1,3:]
+            for i,coord in enumerate(coords):
+                if not i==0:
+                    disps = coords[i]-coords[i-1]
+                    correction = [0 if disp<bound else -disp for disp,bound in zip(disps,bounds)]
+                    self.atoms_array[molecule[i],3:]=self.atoms_array[molecule[i],3:]+correction
+
+    def to_LAMMPS_datafile(self):
+        import pdb;pdb.set_trace() 
+        sim_bounds = self.guess_simulation_bounds()
+        self.unwrap_molecules([sim_bounds[0,1]-sim_bounds[0,0],
+                               sim_bounds[1,1]-sim_bounds[1,0],
+                               sim_bounds[2,1]-sim_bounds[2,0]])
+        np.savetxt('atom_tmp.txt',self.atoms_array,fmt='%d\t%d\t%d\t%0.4f\t%0.4f\t%0.4f')
+        index_bonds = np.concatenate(((np.arange(len(self.bonds))+1)[:,np.newaxis],self.bonds),axis=1)
+        np.savetxt('bonds_tmp.txt',index_bonds,fmt='%d\t%d\t%d\t%d')
+        unique_atoms = int(np.amax(np.unique(self.atoms_array[:,2])))
+        unique_bonds = int(np.amax(np.unique(self.bonds[:,0])))
+        header = ("LAMMPS Description\n\n"
+                  "{} atoms\n"
+                  "{} bonds\n\n"
+                  "{} atom types\n"
+                  "{} bond types\n\n"
+                  "{} {} xlo xhi\n"
+                  "{} {} ylo yhi\n"
+                  "{} {} zlo zhi\n\n"
+                  "Masses\n\n").format(len(self.atoms_array),len(self.bonds),
+                                       unique_atoms,unique_bonds,
+                                       sim_bounds[0,0],sim_bounds[0,1],
+                                        sim_bounds[1,0],sim_bounds[1,1],
+                                        sim_bounds[2,0],sim_bounds[2,1])
+        masses = "\n".join(["{} {}".format(i+1,mass) for i,mass in enumerate(range(unique_atoms))])
+        with open('tmpdata.data','w') as datafile:
+            datafile.write(header)
+            datafile.write(masses)
+            datafile.write("\n\nAtoms\n\n")
+            datafile.write(open('atom_tmp.txt','r').read())
+            datafile.write("\nBonds\n\n")
+            datafile.write(open('bonds_tmp.txt','r').read())
+
+    def visualize_snapshot(self,imagefilename):
+        self.to_LAMMPS_datafile()
+        import pdb;pdb.set_trace()
+        monomer_molnumbers = [str(molnumber) for molnumber in self.atoms_array[np.array(self.monomers)[:,0]+self.min_node-1,1].astype(int)]
+        sb.call(["ovitos","ovito_template.py","-f","tmpdata.data","-m",",".join(monomer_molnumbers)]) 
+        #sb.call(["ovitos","ovito_template.py","-f","tmpdata.data","-m","0"])  
  
     def create_topology_network(self,atoms, bonds, anchor_atom_type=8):
         G = igraph.Graph()
@@ -345,15 +424,12 @@ class SimulationSnapshot(object):
         [chainnode for node in chain_generator]
 
     def get_monomer_type_fraction(self,atom_type=3):
-        #monomers = [molecule.vs for molecule in self.monomers]
         atoms = np.array(self.monomers).flatten()
         atom_types = [self.topology.vs[atom]['Atom'][2] for atom in atoms]
         types, counts = np.unique(atom_types,return_counts=True)
         return(counts[types==atom_type][0]/len(self.monomers))
 
     def get_chain_type_fraction(self,atom_type=3):
-        #chains = [chain.vs['Atom'] for chain in self.chains]
-        #chains = [chain for chain in self.chains]
         atoms = itertools.chain(self.chains)
         atom_types = [self.topology.vs[atom]['Atom'][2] for atom in atoms]
         types, counts = np.unique(atom_types,return_counts=True)
@@ -371,11 +447,10 @@ class SimulationSnapshot(object):
         return(m_ave/n_ave)
     
     def get_chain_sequence(self,chain):
-        sequence = ' '.join([str(atom['Atom'][2]) for atom in chain])
+        sequence = ' '.join([str(int(atom['Atom'][2])) for atom in chain])
         return(sequence)
 
     def get_sequence_probs(self,sequence,filter_atom_type=(5,6,7),a_type_id=3,b_type_id=4):
-        #import pdb;pdb.set_trace()
         filter_str = r'['+','.join([str(atom_type) for atom_type in filter_atom_type])+']\ ?'
         str_sequence = self.get_chain_sequence(sequence)
         filtered_seq = re.sub(filter_str,"",str_sequence).strip()
@@ -393,10 +468,7 @@ class SimulationSnapshot(object):
         return(chain_probs) 
 
     def get_sequences(self):
-        #for i in self.anchor_atoms:
-        #    print("Anchor atom {}".format(i))
-        #print("Minimum Node: {}".format(self.min_node))
-        sequences = [self.topology.bfsiter(self.topology.vs[anchor[0]-self.min_node]) for anchor in self.anchor_atoms]
+        sequences = [self.topology.bfsiter(self.topology.vs[int(anchor[0])-self.min_node]) for anchor in self.anchor_atoms]
         return(sequences) 
 
 
@@ -459,7 +531,7 @@ def loadAtoms(filename,style="angle"):
     atoms_array = np.loadtxt("tmp.out",skiprows=1)
     call(["rm","tmp.out"])
     atom_list = [Atom(atom[0],atom[1],atom[2],0.,atom[3:6]) for atom in atoms_array]
-    return (atom_list,atoms_array.astype(int))
+    return (atom_list,atoms_array)
 
 
 def loadBonds(filename,style="angle"):

@@ -5,12 +5,15 @@ import argparse
 import pandas as pd
 import nglview
 from nglview.contrib.movie import MovieMaker
+import subprocess as sb
 
 parser = argparse.ArgumentParser(description='Script for modifying, compiling lt and xyz template files and copying the LAMMPS input script output into a standalone simulation folder')
 parser.add_argument('-f','--filename',dest='filename', help="Parent directory where simulations are kept")
 parser.add_argument('-d','--dest_folder',dest='dest_folder',help="Location where results are placed.")
 args = parser.parse_args()
 
+
+filename = args.filename
 
 def topology_from_LAMMPS_data_file(filename,type_to_element_mapping={'1':'Ag','2':'C','3':'C','4':'C','5':'H','6':'H','7':'H','8':'H'}):
     atoms,atom_array = tc.loadAtoms(filename) 
@@ -23,9 +26,21 @@ def topology_from_LAMMPS_data_file(filename,type_to_element_mapping={'1':'Ag','2
     return(topology)          
 
 
-#import pdb;pdb.set_trace()
-topology = topology_from_LAMMPS_data_file(args.filename)
-traj = mdtraj.load('atom_trj.lammpstrj',top=topology)
 
-traj_view = nglview.show_mdtraj(traj)
-MovieMaker(traj_view,output='my.gif',in_memory=True).make()
+#import pdb;pdb.set_trace()
+#topology = topology_from_LAMMPS_data_file(args.filename)
+#traj = mdtraj.load('atom_trj.lammpstrj',top=topology)
+bonds = dump.dump("bonddump.dump")
+atoms = dump.dump("atom_trj.lammpstrj")
+snapshots = tc.construct_molecule_trajectory(filename,bonds,atoms)
+
+step,snapshot = next(snapshots)
+
+snapshot.visualize_snapshot("test.png")
+
+#monomers = [str(i) for i in range(6006,11006)]
+
+#sb.call(["ovitos", "ovito_template.py","-f",args.filename,"-m",",".join(monomers)])
+
+#traj_view = nglview.show_mdtraj(traj)
+#MovieMaker(traj_view,output='my.gif',in_memory=True).make()

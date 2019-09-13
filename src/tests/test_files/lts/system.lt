@@ -1,0 +1,105 @@
+import "copolyff.lt"
+import "graft_bead.lt"
+import "a_bead.lt"
+import "b_bead.lt"
+import "np_bead.lt"
+
+np = new NPBEAD [5766]
+graftbeads = new GRAFTBEAD [239]
+abeads = new ABEAD [4000]
+bbeads = new BBEAD [1000]
+
+write_once("Data Boundary"){
+    -12.5 12.5 xlo xhi     
+    -12.5 12.5 ylo yhi
+    -12.5 12.5 zlo zhi
+}
+
+write_once("In Init"){
+  boundary p p p
+}
+
+write_once("In Run"){
+    ###############
+    #Group Section#
+    ###############
+    group SA type @atom:COPOLYFF/SA
+    group frozen type @atom:COPOLYFF/NP
+    group unfrozen subtract all frozen
+ 
+    molecule mol1 rxn1_pretemplate.txt
+    molecule mol2 rxn1_posttemplate.txt
+    molecule mol3 rxn2_pretemplate.txt
+    molecule mol4 rxn2_posttemplate.txt
+    molecule mol5 rxn3_pretemplate.txt
+    molecule mol6 rxn3_posttemplate.txt
+    molecule mol7 rxn4_pretemplate.txt
+    molecule mol8 rxn4_posttemplate.txt
+    molecule mol9 rxn5_pretemplate.txt
+    molecule mol10 rxn5_posttemplate.txt
+    molecule mol11 rxn6_pretemplate.txt
+    molecule mol12 rxn6_posttemplate.txt
+
+    variable Nmono equal count(SA)/2.0
+      
+    #############
+    #Fix Section#
+    #############   
+    fix poly1 all bond/react stabilization yes unfrozen 0.05 react raft1 all 1 0 0.2 mol1 mol2 map_file1.txt &
+                                                        react raft2 all 1 0 0.2 mol3 mol4 map_file2.txt &
+                                                        react raft3 all 1 0 0.2 mol5 mol6 map_file3.txt &
+                                                        react raft4 all 1 0 0.2 mol7 mol8 map_file4.txt &
+                                                        react raft5 all 1 0 0.2 mol9 mol10 map_file5.txt &
+                                                        react raft6 all 1 0 0.2 mol11 mol12 map_file6.txt
+
+
+    fix freeze frozen setforce 0. 0. 0.
+
+    thermo 50
+    minimize 1.0e-5 1.0e-7 1000 10000
+
+    fix stabilizer bond_react_MASTER_group temp/rescale 1 3.0 3.0 10 1    
+
+    fix fxLAN unfrozen_REACT langevin 3.0 3.0 10 48279
+    fix fxNVE unfrozen_REACT nve  	
+    velocity  unfrozen_REACT create 3.0 48279
+
+    #################
+    #Compute Section#
+    #################
+    compute bcomp all property/local btype batom1 batom2 
+    compute myTemp unfrozen temp
+    thermo_modify temp myTemp
+    thermo_style custom step temp ke pe epair emol ebond eangle bonds angles f_poly1[1] f_poly1[2] f_poly1[3] f_poly1[4] f_poly1[5] f_poly1[6]
+
+    ###################
+    #Data Dump Section#
+    ###################
+    dump bdump all local 1000 bonddump.dump c_bcomp[1] c_bcomp[2] c_bcomp[3]  
+    dump adump all atom 1000 atom_trj.lammpstrj
+
+    #############
+    #Run Section#
+    #############
+    neighbor 0.5 bin
+    neigh_modify delay 3 
+
+    timestep 0.001
+
+    group living type @atom:COPOLYFF/ACTIVE
+    group dormant type @atom:COPOLYFF/DORMANT
+    set group living type/fraction @atom:COPOLYFF/DORMANT 0.8 987654
+    set group dormant type/fraction @atom:COPOLYFF/ACTIVE 0.2 987654
+    label loop
+        write_data traj_step*.data nofix
+    	run   1000
+        if "!(sum(f_poly1)/v_Nmono)>0.9" then "jump SELF break"
+        group living clear
+        group dormant clear
+        group living type @atom:COPOLYFF/ACTIVE
+        group dormant type @atom:COPOLYFF/DORMANT
+        set group living type/fraction @atom:COPOLYFF/DORMANT 0.8 987654
+        set group dormant type/fraction @atom:COPOLYFF/ACTIVE 0.2 987654
+        jump SELF loop
+    label break
+}
