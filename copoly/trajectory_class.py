@@ -8,6 +8,7 @@ import networkx as ntwkx
 import numpy as np
 from math import *
 from copoly.dump import dump
+from copoly import dump_generator
 from subprocess import call, check_output
 import re
 import igraph
@@ -279,6 +280,26 @@ def construct_molecule_trajectory(datafile,bondtrajectory,atomtrajectory=None):
             atom_coords=None
         yield((timestep,SimulationSnapshot(atoms,bonds,atoms_array,atom_coords=atom_coords)))
 
+def construct_molecule_trajectory_from_generators(datafile,bondfile,atomfile):
+    """From a LAMMPS input file construct a list of Molecule objects based on the molecules in the LAMMPS input file.
+
+    Parameters
+    ----------
+    filename : str
+        The name of the LAMMPS input file that contains the molecules
+
+    Returns
+    -------
+    molecules : Molecule List
+        A list of Molecule objects with the data specified by the LAMMPS input file passed in.
+    """
+    atoms,atoms_array = loadAtoms(datafile)
+    bond_snapshots = dump_generator.read_dump(bondfile)
+    atom_snapshots = dump_generator.read_dump(atomfile)
+    for atoms_array, bonds in zip(atom_snapshots,bond_snapshots):
+        yield(SimulationSnapshot(atoms,bonds,atoms_array,atom_coords=atoms_array))
+
+
 
 def rot_quat(vector,theta,rot_axis):
     """Rotates a vector about a specified axis a specified angle theta using the quaternion method
@@ -329,9 +350,10 @@ class SimulationSnapshot(object):
     def __init__(self,atoms,bonds,atoms_array=None,atom_coords=None,anchor_atom_type=8):
         self.atoms = {atom.atomID: atom for atom in atoms if not atom.atomType==1}
         self.bonds = bonds
+        #import pdb;pdb.set_trace()
         self.atoms_array = atoms_array
-        if not atom_coords is None:
-            self.atoms_array[:,3:6]=atom_coords[:,2:5]
+        #if not atom_coords is None:
+        #    self.atoms_array[:,3:6]=atom_coords[:,2:5]
         self.anchor_atoms = atoms_array[atoms_array[:,2]==anchor_atom_type]
         self.topology = self.create_topology_network(atoms_array,self.bonds)
         self.molecules = list(self.topology.components())
@@ -401,12 +423,16 @@ class SimulationSnapshot(object):
  
     def create_topology_network(self,atoms, bonds, anchor_atom_type=8):
         G = igraph.Graph()
-        nodes = list(self.atoms.keys())
-        atom_attributes = list(self.atoms.values())
+        nodes = self.atoms_array[:,0].astype(int)
+        #nodes = list(self.atoms.keys())
+        #atom_attributes = list(self.atoms.values())
+        atom_attributes = self.atoms_array
         G.add_vertices(nodes)
-        G.vs["Atom"] = atoms
+        #G.vs["Atom"] = atoms
+        G.vs["Atom"] = self.atoms_array
         self.min_node = np.min(G.vs['name'])
-        G.add_edges(zip(bonds[:,1]-self.min_node,self.bonds[:,2]-self.min_node))
+        #self.min_node = int(np.amin(self.atoms_array[:,0]))
+        G.add_edges(zip(bonds[:,1].astype(int)-self.min_node,self.bonds[:,2].astype(int)-self.min_node))
         return(G)
     
     def get_number_chains(self):
