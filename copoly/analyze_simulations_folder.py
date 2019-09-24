@@ -8,10 +8,14 @@ parser = argparse.ArgumentParser(description='Script for modifying, compiling lt
 parser.add_argument('-f','--folder',dest='folder', help="Parent directory where simulations are kept")
 parser.add_argument('-d','--dest_folder',dest='dest_folder',help="Location where results are placed.")
 parser.add_argument('-s','--specific',default=None,dest='specific_file',help="Name of specific folder to analyze if only one folder is wanted.")
+parser.add_argument('-l','--local',dest='local',action='store_true',help='Set this to analyze simulation folders on the local machine')
 args = parser.parse_args()
 
-server_connection = svc.ServerConnection()
-subfolders = server_connection.lsdir(args.folder)
+if not args.local:
+    server_connection = svc.ServerConnection()
+    subfolders = server_connection.lsdir(args.folder)
+else:
+    subfolders = os.listdir(args.folder)
 print("Found subfolders {}".format(subfolders))
 
 if args.specific_file==None:
@@ -26,7 +30,8 @@ dest_path= os.path.abspath(args.dest_folder)
 for i,folder in enumerate(simfolders):
     print("Analyzing {} simulation of a total of {}".format(i,len(simfolders)))
     os.makedirs(dest_path+'/'+folder,exist_ok=True)
-    result = csr.SimulationResults(args.folder+'/'+folder,dest_path+'/'+folder)
+    if args.local:
+        result = csr.SimulationResults(args.folder+'/'+folder,dest_path+'/'+folder,is_remote=False)
     result.get_trajectory(dest_path+'/'+folder)
     data = result.analyze_trajectory(dest_path+'/'+folder)
     data.to_csv(dest_path+'/'+folder+'/traj_analysis.csv')

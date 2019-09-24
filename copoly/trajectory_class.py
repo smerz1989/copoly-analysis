@@ -296,8 +296,8 @@ def construct_molecule_trajectory_from_generators(datafile,bondfile,atomfile):
     atoms,atoms_array = loadAtoms(datafile)
     bond_snapshots = dump_generator.read_dump(bondfile)
     atom_snapshots = dump_generator.read_dump(atomfile)
-    for atoms_array, bonds in zip(atom_snapshots,bond_snapshots):
-        yield(SimulationSnapshot(atoms,bonds,atoms_array,atom_coords=atoms_array))
+    for traj_array, bonds in zip(atom_snapshots,bond_snapshots):
+        yield(SimulationSnapshot(atoms,bonds,atoms_array,atom_coords=traj_array))
 
 
 
@@ -352,9 +352,9 @@ class SimulationSnapshot(object):
         self.bonds = bonds
         #import pdb;pdb.set_trace()
         self.atoms_array = atoms_array
-        #if not atom_coords is None:
-        #    self.atoms_array[:,3:6]=atom_coords[:,2:5]
-        self.anchor_atoms = atoms_array[atoms_array[:,2]==anchor_atom_type]
+        if not atom_coords is None:
+            self.atoms_array[:,3:6]=atom_coords[:,2:5]
+        self.anchor_atoms = atoms_array[atoms_array[:,2].astype(int)==anchor_atom_type]
         self.topology = self.create_topology_network(atoms_array,self.bonds)
         self.molecules = list(self.topology.components())
         self.relabel_molecules()
@@ -476,21 +476,31 @@ class SimulationSnapshot(object):
         sequence = ' '.join([str(int(atom['Atom'][2])) for atom in chain])
         return(sequence)
 
+    def get_chain_sequence_filtered(self,chain,filter_atom_types=(2,5,6,7,8),a_type_id=3,b_type_id=4):
+        sequence = ''.join([str(int(atom['Atom'][2])) for atom in chain if int(atom['Atom'][2]) not in filter_atom_types])
+        return(sequence)
+
     def get_sequence_probs(self,sequence,filter_atom_type=(5,6,7),a_type_id=3,b_type_id=4):
         filter_str = r'['+','.join([str(atom_type) for atom_type in filter_atom_type])+']\ ?'
         str_sequence = self.get_chain_sequence(sequence)
         filtered_seq = re.sub(filter_str,"",str_sequence).strip()
         filtered_seq = re.sub(r'\ ',"",filtered_seq)
+        filtered_seq_one_shift = filtered_seq[-1]+filtered_seq[:-1]
         numAA = len(re.findall(r'(?='+str(a_type_id)*2+')',filtered_seq))
         numBB = len(re.findall(r'(?='+str(b_type_id)*2+')',filtered_seq)) 
-        numAB = len(re.findall(r'(?='+str(a_type_id)+str(b_type_id)+')',filtered_seq)) 
-        return((numAA,numBB,numAB))        
+        numAB = len(re.findall(r'(?='+str(a_type_id)+str(b_type_id)+')',filtered_seq))
+        numBA = len(re.findall(r'(?='+str(b_type_id)+str(a_type_id)+')',filtered_seq))
+        #numAA_oneshift = len(re.findall(r'(?='+str(a_type_id)*2+')',filtered_seq_one_shift))
+        #numBB_oneshift = len(re.findall(r'(?='+str(b_type_id)*2+')',filtered_seq_one_shift)) 
+        #numAB_oneshift = len(re.findall(r'(?='+str(a_type_id)+str(b_type_id)+')',filtered_seq_one_shift))
+        #numBA_oneshift = len(re.findall(r'(?='+str(b_type_id)+str(a_type_id)+')',filtered_seq_one_shift))
+        return((numAA,numBB,numAB,numBA))        
 
     def get_all_probs(self):
         sequences = self.get_sequences()
         chain_counts = zip(*[self.get_sequence_probs(seq) for seq in sequences])
         chain_sums = [sum(count) for count in chain_counts]
-        chain_probs = np.array(chain_sums)/sum(chain_sums) if sum(chain_sums)>0 else (0,0,0) 
+        chain_probs = np.array(chain_sums)/sum(chain_sums) if sum(chain_sums)>0 else (0,0,0,0) 
         return(chain_probs) 
 
     def get_sequences(self):

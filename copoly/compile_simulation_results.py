@@ -9,12 +9,14 @@ from tqdm import tqdm, tqdm_notebook
 from dump import dump
 import time
 import os
-
+import shutil
 
 class SimulationResults(object):
-    def __init__(self,sim_path,local_path):
+    def __init__(self,sim_path,local_path,is_remote=True):
         self.sim_path = sim_path
-        self.server_connection = svc.ServerConnection()
+        self.is_remote = is_remote
+        if is_remote:
+            self.server_connection = svc.ServerConnection()
         self.local_path = os.path.abspath(local_path)
 
     def is_trajectory_downloaded(self,local_path):
@@ -26,13 +28,19 @@ class SimulationResults(object):
  
 
     def get_trajectory(self,local_path,redownload=False):
-        traj_existing = self.is_trajectory_downloaded(local_path)
-        if redownload or not traj_existing[0]:
-            self.server_connection.get_file(self.sim_path+'/atom_trj.lammpstrj', local_path+'/atom_trj.lammpstrj')
-        if redownload or not traj_existing[1]:    
-            self.server_connection.get_file(self.sim_path+'/bonddump.dump',local_path+'/bonddump.dump')
-        if redownload or not traj_existing[2]:
-            self.server_connection.get_file(self.sim_path+'/system.data',local_path+'/system.data')
+        if self.is_remote:
+            traj_existing = self.is_trajectory_downloaded(local_path)
+            if redownload or not traj_existing[0]:
+                self.server_connection.get_file(self.sim_path+'/atom_trj.lammpstrj', local_path+'/atom_trj.lammpstrj')
+            if redownload or not traj_existing[1]:    
+                self.server_connection.get_file(self.sim_path+'/bonddump.dump',local_path+'/bonddump.dump')
+            if redownload or not traj_existing[2]:
+                self.server_connection.get_file(self.sim_path+'/system.data',local_path+'/system.data')
+        else:
+            if not self.sim_path==local_path:
+                shutil.copy2(self.sim_path+'/atom_trj.lammpstrj',local_path)
+                shutil.copy2(self.sim_path+'/bonddump.dump',local_path)
+                shutil.copy2(self.sim_path+'/system.data',local_path)
         self.bdump_path = local_path+'/bonddump.dump'
         self.atomtrj_path = local_path+'/atom_trj.lammpstrj'
         self.data_file_path = local_path+'/system.data'
@@ -41,17 +49,18 @@ class SimulationResults(object):
         bdump = dump(local_path+'/bonddump.dump')
         snapshots = trj.construct_molecule_trajectory(local_path+'/system.data',bdump)
         timesteps = bdump.time()
-        simulation_data = pd.DataFrame(columns=['NMonomers','fA','fB','p','DOP','PDI','pAA','pBB','pAB'],
+        simulation_data = pd.DataFrame(columns=['NMonomers','fA','fB','p','DOP','PDI','pAA','pBB','pAB','pBA'],
                                         index=timesteps,dtype=float)
         with tqdm(total=len(timesteps)) as pbar:
             for i,(timestep,snapshot) in enumerate(snapshots):
                 simulation_data.loc[timestep,'NMonomers'] = snapshot.get_number_monomers()
                 simulation_data.loc[timestep,'PDI'] = snapshot.get_pdi()
                 simulation_data.loc[timestep,'DOP'] = snapshot.get_dop()
-                (newpAA,newpBB,newpAB) = snapshot.get_all_probs() 
+                (newpAA,newpBB,newpAB,newPBA) = snapshot.get_all_probs() 
                 simulation_data.loc[timestep,'pAA'] = newpAA
                 simulation_data.loc[timestep,'pBB'] = newpBB
-                simulation_data.loc[timestep,'pAB'] = newpAB            
+                simulation_data.loc[timestep,'pAB'] = newpAB
+                simulation_data.loc[timestep,'pBA'] = newpAB
                 if i==0:
                     No = snapshot.get_number_monomers()
                     simulation_data.loc[timestep,'p']=0.
@@ -75,13 +84,15 @@ class SimulationResults(object):
         paxis = fig.add_subplot(gs1[3:6,3:6])
         paxis.set_ylim([0.,1.])
         sns.relplot(kind="line",data=traj_df['p'],ax=paxis)
-        prob_names = ['pAA','pBB','pAB']
+        prob_names = ['pAA','pBB','pAB','pBA']
+        prob_max = traj_df[prob_names].max().max()
 
         for i,prob in enumerate(prob_names):
             col = i*2
-            axis = fig.add_subplot(gs1[6:8,col:(col+2)])
-            axis.set_ylim(0.,0.5)
-            sns.relplot(kind="line",data=traj_df[prob],ax=axis)
+            if i<3:
+                axis = fig.add_subplot(gs1[6:8,col:(col+2)])
+                axis.set_ylim(0.,prob_max)
+            sns.lineplot(data=traj_df[prob],ax=axis)
 
         mapaxis = fig.add_subplot(gs1[8:11,0:3])
         mapaxis.set_ylim([0.,1.])
@@ -90,4 +101,4 @@ class SimulationResults(object):
         sns.relplot(kind="line",data=traj_df['fA'],ax=mapaxis)
         sns.relplot(kind="line",data=traj_df['fB'],ax=mbpaxis)
         fig.savefig(self.local_path+'/monomer_plot.png')
-        plt.close()
+        plt.close(fig)

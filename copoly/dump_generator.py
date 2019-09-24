@@ -12,15 +12,15 @@ def read_dump(filename,header_size=9):
     cur_line_number=0
     with open(filename,'r') as datafile:
         while True:
-            #header = ''.join(islice(datafile,cur_line_number,cur_line_number+9))
-            header = ''.join(datafile.readline() for i in range(header_size))
-            #print(header)
-            header_data = re.findall(r'[0-9]+',header)
-            num_entries = int(header_data[1])
-            #print(num_entries)
-            lines = [datafile.readline() for i in range(num_entries)]
-            #lines = islice(datafile,cur_line_number+num_entries)
-            #cur_line_number +=num_entries+9
-            data1D = np.fromstring(' '.join(lines).replace('\n',' '),sep = ' ')
-            data = data1D.reshape((num_entries,ceil(len(data1D)/num_entries)))
-            yield(data)
+            try:
+                header = ''.join(datafile.readline() for i in range(header_size))
+                if header=='':
+                    break
+                header_data = re.findall(r'[0-9]+',header)
+                num_entries = int(header_data[1])
+                lines = [datafile.readline() for i in range(num_entries)]
+                data1D = np.fromstring(' '.join(lines).replace('\n',' '),sep = ' ')
+                data = data1D.reshape((num_entries,ceil(len(data1D)/num_entries)))
+                yield(data)
+            except EOFError as e:
+                break

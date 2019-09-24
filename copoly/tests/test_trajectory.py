@@ -39,10 +39,10 @@ class TestSimulationSnapshot(unittest.TestCase):
         
 
     def test_get_sequence_gets_correct_sequence_probs_for_all_A_and_all_B_polymers(self):
-        pAA,pBB,pAB = self.snapshot1_AABB.get_all_probs()
-        np.testing.assert_almost_equal([pAA,pBB,pAB],[0.5,0.5,0.],err_msg="get_all_probs does not return corect pAA,pBB,pAB for uniform (all A and all B) polymers")
+        pAA,pBB,pAB,pBA = self.snapshot1_AABB.get_all_probs()
+        np.testing.assert_almost_equal([pAA,pBB,pAB,pBA],[0.5,0.5,0.,0.],err_msg="get_all_probs does not return corect pAA,pBB,pAB for uniform (all A and all B) polymers")
 
     def test_get_sequence_gets_correct_sequence_probs_for_ABAB_polymers(self):
-        pAA,pBB,pAB = self.snapshot1_ABAB.get_all_probs()
-        np.testing.assert_almost_equal([pAA,pBB,pAB],[0.0,0.0,1.],err_msg="get_all_probs does not return corect pAA,pBB,pAB for uniform (all A and all B) polymers")
+        pAA,pBB,pAB,pBA = self.snapshot1_ABAB.get_all_probs()
+        np.testing.assert_almost_equal([pAA,pBB,pAB,pBA],[0.0,0.0,0.5,0.5],err_msg="get_all_probs does not return corect pAA,pBB,pAB for uniform (all A and all B) polymers")
 

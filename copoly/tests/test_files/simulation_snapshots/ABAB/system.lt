@@ -1,6 +1,6 @@
-import "polyAB10.lt"
+import "polyAB25.lt"
 
-polymerA = new CopolyAB10[5].move(2,0,0)[5].move(0,0,2)
+polymerA = new CopolyAB25[5].move(2,0,0)[5].move(0,0,2)
 #polymerB = new CopolyB10.move(0,0,-3)[5].move(-2,0,0)[5].move(0,0,2)
 
 write_once("Data Boundary"){
