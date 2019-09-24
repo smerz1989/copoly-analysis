@@ -2,6 +2,8 @@ Atoms.txt
 *.png
 *.data
 *.dump
+.eggs
+copoly.egg-info
 !copoly/tests/test_files/**/*.dump
 !copoly/tests/test_files/**/*.data
 *.pyc
