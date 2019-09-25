@@ -10,6 +10,8 @@ from dump import dump
 import time
 import os
 import shutil
+import re
+import itertools as it
 
 class SimulationResults(object):
     def __init__(self,sim_path,local_path,is_remote=True):
@@ -73,6 +75,27 @@ class SimulationResults(object):
         return(simulation_data)
 
 
+    def analyze_trajectory_by_function(self,local_path):
+        bdump = dump(local_path+'/bonddump.dump')
+        snapshots = trj.construct_molecule_trajectory(local_path+'/system.data',bdump)
+        timesteps = bdump.time()
+        simulation_data = pd.DataFrame(columns=['block_lengths'],
+                                        index=timesteps,dtype=float)
+        sequence_data={}
+        with tqdm(total=len(timesteps)) as pbar:
+            for i,(timestep,snapshot) in enumerate(snapshots):
+                sequences = [snapshot.get_chain_sequence_filtered(chain) for chain in snapshot.get_sequences()]
+                block_lengths = [get_block_lengths(chain_string) for chain_string in sequences]
+                a_lengths_by_chain, b_lengths_by_chain = zip(*block_lengths)
+                a_lengths = list(it.chain.from_iterable(a_lengths_by_chain))
+                b_lengths = list(it.chain.from_iterable(b_lengths_by_chain))
+                sequence_data[timestep]={'a_lengths': a_lengths, 'b_lengths': b_lengths}
+                #simulation_data.loc[timestep,'a_lengths'] = a_lengths
+                #simulation_data.loc[timestep,'b_lengths'] = b_lengths
+                pbar.update(1)
+        return(sequence_data)
+
+
     def plot_trajectory(self,traj_df):
         sns.set_style("ticks")
         fig = plt.figure(figsize=(18,24))
@@ -102,3 +125,11 @@ class SimulationResults(object):
         sns.relplot(kind="line",data=traj_df['fB'],ax=mbpaxis)
         fig.savefig(self.local_path+'/monomer_plot.png')
         plt.close(fig)
+
+
+def get_block_lengths(chain_string,a_string='3',b_string='4'):
+    A_blocks = [len(block) for block in re.findall(r''+a_string+'+',chain_string)]
+    B_blocks = [len(block) for block in re.findall(r''+b_string+'+',chain_string)]
+    return(A_blocks,B_blocks)
+
+

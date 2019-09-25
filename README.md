@@ -1,6 +1,6 @@
-[![Build Status](https://travis-ci.org/smerz1989/copoly-analysis.svg?branch=master)](https://travis-ci.org/smerz1989/copoly-analysis)
-
 # Copoly
+
+[![Build Status](https://travis-ci.org/smerz1989/copoly-analysis.svg?branch=master)](https://travis-ci.org/smerz1989/copoly-analysis)
 
 ## Description
 
