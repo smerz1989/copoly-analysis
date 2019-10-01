@@ -503,6 +503,19 @@ class SimulationSnapshot(object):
         chain_probs = np.array(chain_sums)/sum(chain_sums) if sum(chain_sums)>0 else (0,0,0,0) 
         return(chain_probs) 
 
+    def get_conditional_probs(self):
+        sequences = self.get_sequences()
+        str_sequences = [self.get_chain_sequence_filtered(seq) for seq in sequences]
+        for seq in str_sequences:
+            numAA = len(re.findall(r'(?='+str(a_type_id)*2+')',filtered_seq))
+            numBB = len(re.findall(r'(?='+str(b_type_id)*2+')',filtered_seq)) 
+            numAB = len(re.findall(r'(?='+str(a_type_id)+str(b_type_id)+')',filtered_seq))
+            numBA = len(re.findall(r'(?='+str(b_type_id)+str(a_type_id)+')',filtered_seq))
+            numA = len(re.findall(r''+str(a_type_id),filtered_seq[:-1]))
+            numB = len(re.findall(r''+str(b_type_id),filtered_seq[:-1]))
+        return((numAA/numA),(numBB/numB),(numAB/numA),(numBA/numB))
+
+
     def get_sequences(self):
         sequences = [self.topology.bfsiter(self.topology.vs[int(anchor[0])-self.min_node]) for anchor in self.anchor_atoms]
         return(sequences) 
