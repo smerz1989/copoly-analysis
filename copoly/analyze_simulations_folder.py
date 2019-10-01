@@ -36,13 +36,13 @@ for i,folder in enumerate(simfolders):
     os.makedirs(dest_path+'/'+folder,exist_ok=True)
     if args.local:
         result = csr.SimulationResults(args.folder+'/'+folder,dest_path+'/'+folder,is_remote=False)
-    result.get_trajectory(dest_path+'/'+folder)
+    result.get_trajectory(args.folder+'/'+folder)
     if not args.only_chain:
-        data = result.analyze_trajectory(dest_path+'/'+folder)
-        data.to_csv(dest_path+'/'+folder+'/traj_analysis.csv')
+        data = result.analyze_trajectory(args.folder+'/'+folder)
+        data.to_csv(args.folder+'/'+folder+'/traj_analysis.csv')
         result.plot_trajectory(data)
     else:
-        data = result.analyze_trajectory_by_function(dest_path+'/'+folder)
-        with open('seq_analysis.json','w') as jfile:
+        data = result.analyze_trajectory_by_function(args.folder+'/'+folder)
+        with open(args.folder+'/'+folder+'/seq_analysis.json','w') as jfile:
             json.dump(data,jfile,sort_keys=True,indent=2)
 

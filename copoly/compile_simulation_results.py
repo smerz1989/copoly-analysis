@@ -40,6 +40,7 @@ class SimulationResults(object):
                 self.server_connection.get_file(self.sim_path+'/system.data',local_path+'/system.data')
         else:
             if not self.sim_path==local_path:
+                print("Sim path is: {}\n\nLocal path is {}".format(self.sim_path,local_path))
                 shutil.copy2(self.sim_path+'/atom_trj.lammpstrj',local_path)
                 shutil.copy2(self.sim_path+'/bonddump.dump',local_path)
                 shutil.copy2(self.sim_path+'/system.data',local_path)
@@ -76,7 +77,8 @@ class SimulationResults(object):
 
 
     def analyze_trajectory_by_function(self,local_path):
-        bdump = dump(local_path+'/bonddump.dump')
+        print(local_path+'/bonddump.dump')
+        bdump = dump(r''+local_path+'/bonddump.dump')
         snapshots = trj.construct_molecule_trajectory(local_path+'/system.data',bdump)
         timesteps = bdump.time()
         simulation_data = pd.DataFrame(columns=['block_lengths'],
@@ -89,7 +91,7 @@ class SimulationResults(object):
                 a_lengths_by_chain, b_lengths_by_chain = zip(*block_lengths)
                 a_lengths = list(it.chain.from_iterable(a_lengths_by_chain))
                 b_lengths = list(it.chain.from_iterable(b_lengths_by_chain))
-                sequence_data[timestep]={'a_lengths': a_lengths, 'b_lengths': b_lengths}
+                sequence_data[timestep]={'a_lengths': a_lengths, 'b_lengths': b_lengths,'sequences': sequences}
                 #simulation_data.loc[timestep,'a_lengths'] = a_lengths
                 #simulation_data.loc[timestep,'b_lengths'] = b_lengths
                 pbar.update(1)
