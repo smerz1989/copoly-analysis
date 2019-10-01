@@ -506,13 +506,14 @@ class SimulationSnapshot(object):
     def get_conditional_probs(self):
         sequences = self.get_sequences()
         str_sequences = [self.get_chain_sequence_filtered(seq) for seq in sequences]
+        numAA,numBB,numAB,numBA,numA,numB = (0,0,0,0,0,0)
         for seq in str_sequences:
-            numAA = len(re.findall(r'(?='+str(a_type_id)*2+')',filtered_seq))
-            numBB = len(re.findall(r'(?='+str(b_type_id)*2+')',filtered_seq)) 
-            numAB = len(re.findall(r'(?='+str(a_type_id)+str(b_type_id)+')',filtered_seq))
-            numBA = len(re.findall(r'(?='+str(b_type_id)+str(a_type_id)+')',filtered_seq))
-            numA = len(re.findall(r''+str(a_type_id),filtered_seq[:-1]))
-            numB = len(re.findall(r''+str(b_type_id),filtered_seq[:-1]))
+            numAA += len(re.findall(r'(?='+str(a_type_id)*2+')',seq))
+            numBB += len(re.findall(r'(?='+str(b_type_id)*2+')',seq)) 
+            numAB += len(re.findall(r'(?='+str(a_type_id)+str(b_type_id)+')',seq))
+            numBA += len(re.findall(r'(?='+str(b_type_id)+str(a_type_id)+')',seq))
+            numA += len(re.findall(r'(?='+str(a_type_id)+')',seq[:-1]))
+            numB += len(re.findall(r'(?='+str(b_type_id)+')',seq[:-1]))
         return((numAA/numA),(numBB/numB),(numAB/numA),(numBA/numB))
 
 

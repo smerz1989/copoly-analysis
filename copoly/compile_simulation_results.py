@@ -87,11 +87,16 @@ class SimulationResults(object):
         with tqdm(total=len(timesteps)) as pbar:
             for i,(timestep,snapshot) in enumerate(snapshots):
                 sequences = [snapshot.get_chain_sequence_filtered(chain) for chain in snapshot.get_sequences()]
+                conditional_probs = snapshot.get_conditional_probs()
+                conditional_probs_dict = {'pAA': conditional_probs[0],
+                                          'pBB': conditional_probs[1],
+                                          'pAB': conditional_probs[2],
+                                          'pBA': conditional_probs[3]}
                 block_lengths = [get_block_lengths(chain_string) for chain_string in sequences]
                 a_lengths_by_chain, b_lengths_by_chain = zip(*block_lengths)
                 a_lengths = list(it.chain.from_iterable(a_lengths_by_chain))
                 b_lengths = list(it.chain.from_iterable(b_lengths_by_chain))
-                sequence_data[timestep]={'a_lengths': a_lengths, 'b_lengths': b_lengths,'sequences': sequences}
+                sequence_data[timestep]={'a_lengths': a_lengths, 'b_lengths': b_lengths,'sequences': sequences,'conditional_probs': conditional_probs_dict}
                 #simulation_data.loc[timestep,'a_lengths'] = a_lengths
                 #simulation_data.loc[timestep,'b_lengths'] = b_lengths
                 pbar.update(1)
