@@ -382,7 +382,6 @@ class SimulationSnapshot(object):
                     self.atoms_array[molecule[i],3:]=self.atoms_array[molecule[i],3:]+correction
 
     def to_LAMMPS_datafile(self):
-        import pdb;pdb.set_trace() 
         sim_bounds = self.guess_simulation_bounds()
         self.unwrap_molecules([sim_bounds[0,1]-sim_bounds[0,0],
                                sim_bounds[1,1]-sim_bounds[1,0],
@@ -414,11 +413,10 @@ class SimulationSnapshot(object):
             datafile.write("\nBonds\n\n")
             datafile.write(open('bonds_tmp.txt','r').read())
 
-    def visualize_snapshot(self,imagefilename):
+    def visualize_snapshot(self,imagefilename,destfolder=''):
         self.to_LAMMPS_datafile()
-        import pdb;pdb.set_trace()
         monomer_molnumbers = [str(molnumber) for molnumber in self.atoms_array[np.array(self.monomers)[:,0]+self.min_node-1,1].astype(int)]
-        sb.call(["ovitos","ovito_template.py","-f","tmpdata.data","-m",",".join(monomer_molnumbers)]) 
+        sb.call(["ovitos","ovito_template.py","-f","tmpdata.data",'-d',destfolder,"-m",",".join(monomer_molnumbers),'-i',imagefilename]) 
         #sb.call(["ovitos","ovito_template.py","-f","tmpdata.data","-m","0"])  
  
     def create_topology_network(self,atoms, bonds, anchor_atom_type=8):

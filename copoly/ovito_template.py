@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser(description='Flexible Python script template fo
 parser.add_argument('-f','--filename',dest='filename', help="Parent directory where simulations are kept")
 parser.add_argument('-d','--dest_folder',dest='dest_folder',help="Location where results are placed.")
 parser.add_argument('-m','--monlist', dest='mon_list',default='0',help="Comma separated list of monomers to be set to transparent")
+parser.add_argument('-i','--imagename',dest='imagename',default='testfile.png',help='Name to give rendered image.')
 args = parser.parse_args()
 
 filename = args.filename
@@ -71,7 +72,7 @@ vp.fov = math.radians(60.0)
 settings = vis.RenderSettings()
 settings.renderer = vis.TachyonRenderer()
 settings.renderer.shadows = True
-settings.filename = "testimage.png"
+settings.filename = args.dest_folder+'/'+args.imagename
 settings.size = (800,600)
 
 node.add_to_scene()

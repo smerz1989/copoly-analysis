@@ -33,6 +33,7 @@ class SimulationResults(object):
         if self.is_remote:
             traj_existing = self.is_trajectory_downloaded(local_path)
             if redownload or not traj_existing[0]:
+                print("Getting file {}".format(self.sim_path+'/atom_trj.lammpstrj'))
                 self.server_connection.get_file(self.sim_path+'/atom_trj.lammpstrj', local_path+'/atom_trj.lammpstrj')
             if redownload or not traj_existing[1]:    
                 self.server_connection.get_file(self.sim_path+'/bonddump.dump',local_path+'/bonddump.dump')

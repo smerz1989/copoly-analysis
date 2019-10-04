@@ -6,7 +6,7 @@ import server_class as svc
 import re
 
 class Simulation(object):
-    def __init__(self,total_monomers=3000,monomer_A_fraction=0.5,monomer_attractions=(1,1,1),p=0.9,
+    def __init__(self,total_monomers=3000,monomer_A_fraction=0.5,monomer_attractions=(1,1,1),p=0.9,angle_strength=20,
                     dump_frequency=1000,lt_dir = os.path.abspath('../../lt_files/'),
                     xyz_dir = os.path.abspath('../../xyzs/'),send_to_cluster=False,servername=None):
         self.total_monomers = total_monomers
@@ -16,6 +16,7 @@ class Simulation(object):
         self.lt_dir = os.path.abspath(lt_dir)
         self.xyz_dir = os.path.abspath(xyz_dir)
         self.eAA,self.eBB,self.eAB = monomer_attractions
+        self.angle_strength = angle_strength
         self.send_to_cluster=send_to_cluster
         if self.send_to_cluster:
             self.server_connection = svc.ServerConnection()
@@ -24,6 +25,7 @@ class Simulation(object):
     def compile_simulation(self,packmol_path='packmol'):
         self.change_monomer_count()
         self.change_monomer_attraction()
+        self.change_angle_strength()
         os.chdir(self.xyz_dir)
         try:
             sb.call([packmol_path],stdin=open('np.inp'))
@@ -64,6 +66,12 @@ class Simulation(object):
         sb.call(["sed",'-i','s/ABEAD\ \[[0-9]\+\]/ABEAD\ \['+str(num_monA)+'\]/g',"system.lt"])
         sb.call(["sed",'-i','s/BBEAD\ \[[0-9]\+\]/BBEAD\ \['+str(num_monB)+'\]/g',"system.lt"])
         os.chdir(curr_dir)
+
+    def change_angle_strength(self):
+        cur_path = os.path.abspath('.')
+        os.chdir(self.lt_dir)
+        sb.call(["sed","-i",'s/angle_coeff\(.*\)\ [0-9]\?\.\?[0-9]\?\ /angle_coeff\\1\ '+str(self.angle_strength)+'\ /g','copolyff.lt'])
+        os.chdir(cur_path)
 
     def move_simulation_files(self,dest_dir,slurm):
         dest_folder = os.path.abspath(dest_dir+'/copoly_{}monomers_{}percentA_{}epsAA_{}epsBB_{}epsAB'.format(self.total_monomers,
