@@ -29,7 +29,7 @@ else:
     simfolders = [folder for folder in subfolders if args.specific_file in folder]
     print("Found simulation folders {}".format(simfolders))
 
-dest_path= os.path.abspath(args.dest_folder)
+dest_path= args.dest_folder
 
 for i,folder in enumerate(simfolders):
     print("Analyzing {} simulation of a total of {}".format(i,len(simfolders)))
@@ -41,6 +41,7 @@ for i,folder in enumerate(simfolders):
         result = csr.SimulationResults(args.folder+'/'+folder,dest_path+'/'+folder)
     result.get_trajectory(dest_path+'/'+folder)
     if not args.only_chain:
+        print(dest_path+'/'+folder)
         data = result.analyze_trajectory(dest_path+'/'+folder)
         data.to_csv(dest_path+'/'+folder+'/traj_analysis.csv')
         result.plot_trajectory(data)

@@ -295,7 +295,7 @@ def construct_molecule_trajectory_from_generators(datafile,bondfile,atomfile):
     """
     atoms,atoms_array = loadAtoms(datafile)
     bond_snapshots = dump_generator.read_dump(bondfile)
-    atom_snapshots = dump_generator.read_dump(atomfile)
+    atom_snapshots = dump_generator.read_dump(atomfile,scale=True)
     for traj_array, bonds in zip(atom_snapshots,bond_snapshots):
         yield(SimulationSnapshot(atoms,bonds,atoms_array,atom_coords=traj_array))
 
@@ -383,9 +383,12 @@ class SimulationSnapshot(object):
 
     def to_LAMMPS_datafile(self):
         sim_bounds = self.guess_simulation_bounds()
-        self.unwrap_molecules([sim_bounds[0,1]-sim_bounds[0,0],
-                               sim_bounds[1,1]-sim_bounds[1,0],
-                               sim_bounds[2,1]-sim_bounds[2,0]])
+        #self.unwrap_molecules([sim_bounds[0,1]-sim_bounds[0,0],
+        #                       sim_bounds[1,1]-sim_bounds[1,0],
+        #                       sim_bounds[2,1]-sim_bounds[2,0]])
+        print("Guessed sim_bounds are x: {}-{}, y: {}-{}, z: {}-{}".format(sim_bounds[0,0],sim_bounds[0,1],
+                                                                           sim_bounds[1,0],sim_bounds[1,1],
+                                                                           sim_bounds[2,0],sim_bounds[2,1]))
         np.savetxt('atom_tmp.txt',self.atoms_array,fmt='%d\t%d\t%d\t%0.4f\t%0.4f\t%0.4f')
         index_bonds = np.concatenate(((np.arange(len(self.bonds))+1)[:,np.newaxis],self.bonds),axis=1)
         np.savetxt('bonds_tmp.txt',index_bonds,fmt='%d\t%d\t%d\t%d')
@@ -501,7 +504,7 @@ class SimulationSnapshot(object):
         chain_probs = np.array(chain_sums)/sum(chain_sums) if sum(chain_sums)>0 else (0,0,0,0) 
         return(chain_probs) 
 
-    def get_conditional_probs(self):
+    def get_conditional_probs(self,a_type_id=3,b_type_id=4):
         sequences = self.get_sequences()
         str_sequences = [self.get_chain_sequence_filtered(seq) for seq in sequences]
         numAA,numBB,numAB,numBA,numA,numB = (0,0,0,0,0,0)
@@ -512,7 +515,8 @@ class SimulationSnapshot(object):
             numBA += len(re.findall(r'(?='+str(b_type_id)+str(a_type_id)+')',seq))
             numA += len(re.findall(r'(?='+str(a_type_id)+')',seq[:-1]))
             numB += len(re.findall(r'(?='+str(b_type_id)+')',seq[:-1]))
-        return((numAA/numA),(numBB/numB),(numAB/numA),(numBA/numB))
+        probs = ((numAA/numA),(numBB/numB),(numAB/numA),(numBA/numB)) if numA!=0 and numB!=0 else (0,0,0,0)
+        return(probs)
 
 
     def get_sequences(self):

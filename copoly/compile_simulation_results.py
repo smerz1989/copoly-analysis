@@ -3,6 +3,8 @@ import pandas as pd
 import server_class as svc
 import trajectory_class as trj
 import seaborn as sns
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 from tqdm import tqdm, tqdm_notebook
@@ -50,7 +52,8 @@ class SimulationResults(object):
         self.data_file_path = local_path+'/system.data'
 
     def analyze_trajectory(self,local_path):
-        bdump = dump(local_path+'/bonddump.dump')
+        print(r''+local_path+'/bonddump.dump')
+        bdump = dump(r''+local_path+'/bonddump.dump')
         snapshots = trj.construct_molecule_trajectory(local_path+'/system.data',bdump)
         timesteps = bdump.time()
         simulation_data = pd.DataFrame(columns=['NMonomers','fA','fB','p','DOP','PDI','pAA','pBB','pAB','pBA'],
