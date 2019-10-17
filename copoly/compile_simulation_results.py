@@ -14,6 +14,7 @@ import os
 import shutil
 import re
 import itertools as it
+import dump_generator
 
 class SimulationResults(object):
     def __init__(self,sim_path,local_path,is_remote=True):
@@ -53,13 +54,15 @@ class SimulationResults(object):
 
     def analyze_trajectory(self,local_path):
         print(r''+local_path+'/bonddump.dump')
-        bdump = dump(r''+local_path+'/bonddump.dump')
-        snapshots = trj.construct_molecule_trajectory(local_path+'/system.data',bdump)
-        timesteps = bdump.time()
+        #bdump = dump(r''+local_path+'/bonddump.dump')
+        num_timesteps = dump_generator.get_number_of_timesteps(local_path+'/atom_trj.lammpstrj')
+        snapshots = trj.construct_molecule_trajectory_from_generators(local_path+'/system.data',local_path+'/bonddump.dump',local_path+'/atom_trj.lammpstrj')
+        #timesteps = bdump.time()
         simulation_data = pd.DataFrame(columns=['NMonomers','fA','fB','p','DOP','PDI','pAA','pBB','pAB','pBA'],
-                                        index=timesteps,dtype=float)
-        with tqdm(total=len(timesteps)) as pbar:
-            for i,(timestep,snapshot) in enumerate(snapshots):
+                                        dtype=float)
+        i=0
+        with tqdm(total=num_timesteps) as pbar:
+            for timestep,snapshot in enumerate(snapshots):
                 simulation_data.loc[timestep,'NMonomers'] = snapshot.get_number_monomers()
                 simulation_data.loc[timestep,'PDI'] = snapshot.get_pdi()
                 simulation_data.loc[timestep,'DOP'] = snapshot.get_dop()
@@ -76,6 +79,7 @@ class SimulationResults(object):
                     simulation_data.loc[timestep,'p'] = ((No-N)/No)
                 simulation_data.loc[timestep,'fA']= snapshot.get_monomer_type_fraction()
                 simulation_data.loc[timestep,'fB']=1-simulation_data.loc[timestep,'fA']
+                i+=1
                 pbar.update(1)
         return(simulation_data)
 

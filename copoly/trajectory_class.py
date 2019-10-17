@@ -267,13 +267,10 @@ def construct_molecule_trajectory(datafile,bondtrajectory,atomtrajectory=None):
     molecules : Molecule List
         A list of Molecule objects with the data specified by the LAMMPS input file passed in.
     """
-    #print("Loading Data File:")
     atoms,atoms_array = loadAtoms(datafile)
-    #bondtrajectory = dump(bdump)
     bond_snapshots = load_bond_trajectory(bondtrajectory)
     atom_snapshots = None if atomtrajectory is None else load_atom_trajectory(atomtrajectory)
     for timestep, bonds in bond_snapshots:
-        #print("Processing timestep: {}".format(timestep))
         if not atom_snapshots is None:
             timestep,atom_coords = next(atom_snapshots)
         else:
@@ -295,8 +292,8 @@ def construct_molecule_trajectory_from_generators(datafile,bondfile,atomfile):
     """
     atoms,atoms_array = loadAtoms(datafile)
     bond_snapshots = dump_generator.read_dump(bondfile)
-    atom_snapshots = dump_generator.read_dump(atomfile,scale=True)
-    for traj_array, bonds in zip(atom_snapshots,bond_snapshots):
+    atom_snapshots = dump_generator.read_dump(atomfile,scale=False)
+    for (timestep,traj_array), (timestep,bonds) in zip(atom_snapshots,bond_snapshots):
         yield(SimulationSnapshot(atoms,bonds,atoms_array,atom_coords=traj_array))
 
 
@@ -350,7 +347,6 @@ class SimulationSnapshot(object):
     def __init__(self,atoms,bonds,atoms_array=None,atom_coords=None,anchor_atom_type=8):
         self.atoms = {atom.atomID: atom for atom in atoms if not atom.atomType==1}
         self.bonds = bonds
-        #import pdb;pdb.set_trace()
         self.atoms_array = atoms_array
         if not atom_coords is None:
             self.atoms_array[:,3:6]=atom_coords[:,2:5]

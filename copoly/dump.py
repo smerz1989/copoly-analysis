@@ -222,12 +222,13 @@ class dump:
 
     # flist = list of all dump file names
 
-    words = list[0].split()
+    words = [list[0]]
     self.flist = []
+    print("Words are {}".format(words))
     for word in words: self.flist += glob.glob(word)
     if len(self.flist) == 0 and len(list) == 1:
       raise Exception("no dump file specified")
-    
+    print("File list is {}".format(self.flist))
     if len(list) == 1:
       self.increment = 0
       self.read_all()
@@ -244,6 +245,7 @@ class dump:
     # test for gzipped files
 
     for file in self.flist:
+      print(file)
       if file[-3:] == ".gz":
         f = popen("%s -c %s" % (PIZZA_GUNZIP,file),'r')
       else: f = open(file)

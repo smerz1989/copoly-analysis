@@ -92,7 +92,9 @@ class Simulation(object):
                                                                                                  int(100*self.monomer_A_fraction),
                                                                                                     self.eAA,self.eBB,self.eAB)
         print("Moving files to directory: {}".format(self.dest_folder))
+        print("Checking if folder already exists")
         if not self.server_connection.check_if_file_exists(self.dest_folder):
+            print("Folder doesn't exist creating it now")
             self.server_connection.mkdir(self.dest_folder)
         for simfile in glob.glob(r''+self.lt_dir+'/system.*'):
             self.server_connection.send_file(simfile,self.dest_folder+'/'+os.path.basename(simfile))
