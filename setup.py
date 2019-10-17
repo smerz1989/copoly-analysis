@@ -28,7 +28,8 @@ setup(name='copoly',
             'pandas',
             'matplotlib',
             'python_igraph',
-            'mdtraj'
+            'mdtraj',
+            'moltemplate'
             ],
         include_package_data=True,
         zip_safe=False)

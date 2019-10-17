@@ -29,7 +29,7 @@ else:
     simfolders = [folder for folder in subfolders if args.specific_file in folder]
     print("Found simulation folders {}".format(simfolders))
 
-dest_path= args.dest_folder
+dest_path=os.path.abspath(args.dest_folder)
 
 for i,folder in enumerate(simfolders):
     print("Analyzing {} simulation of a total of {}".format(i,len(simfolders)))
