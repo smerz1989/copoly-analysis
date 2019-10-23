@@ -16,6 +16,8 @@ parser.add_argument('--send_to_cluster',dest='send_to_cluster',action='store_tru
 parser.add_argument('--xyz',dest='xyz_folder',help='Path to folder containing xyz file for initial configuration')
 parser.add_argument('--lt',dest='lt_folder',help='Path to folder containing lt files for simulation')
 parser.add_argument('--slurm',dest='slurm',action='store_true',help='If true use slurm queueing system else run job from console')
+parser.add_argument('--suffix',dest='suffix',type=str,default='',help="Suffix to add onto the end of the preformatted simulation folder name.")
+
 
 args = parser.parse_args()
 
@@ -37,5 +39,5 @@ if not args.send_to_cluster:
     sim.move_simulation_files(project_path,slurm=args.slurm)
     sim.start_simulation(slurm  = args.slurm,singularity=os.path.expanduser("~/copoly_bondreact_kspace.sif"))
 else:
-    sim.move_simulation_files_remote(project_path,slurm=args.slurm)
+    sim.move_simulation_files_remote(project_path,slurm=args.slurm,suffix=args.suffix)
     sim.start_simulation_remote()

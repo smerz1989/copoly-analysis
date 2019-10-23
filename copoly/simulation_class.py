@@ -87,10 +87,10 @@ class Simulation(object):
         if slurm:
             shutil.copy("submit.sbatch",dest_folder)
 
-    def move_simulation_files_remote(self,dest_folder,slurm):
-        self.dest_folder = dest_folder+'/copoly_{}monomers_{}percentA_{}epsAA_{}epsBB_{}epsAB'.format(self.total_monomers,
+    def move_simulation_files_remote(self,dest_folder,slurm,suffix=''):
+        self.dest_folder = dest_folder+'/copoly_{}monomers_{}percentA_{}epsAA_{}epsBB_{}epsAB{}'.format(self.total_monomers,
                                                                                                  int(100*self.monomer_A_fraction),
-                                                                                                    self.eAA,self.eBB,self.eAB)
+                                                                                                    self.eAA,self.eBB,self.eAB,suffix)
         print("Moving files to directory: {}".format(self.dest_folder))
         print("Checking if folder already exists")
         if not self.server_connection.check_if_file_exists(self.dest_folder):

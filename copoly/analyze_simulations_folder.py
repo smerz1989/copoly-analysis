@@ -32,7 +32,7 @@ else:
 dest_path=os.path.abspath(args.dest_folder)
 
 for i,folder in enumerate(simfolders):
-    print("Analyzing {} simulation of a total of {}".format(i,len(simfolders)))
+    print("Analyzing {} simulation of a total of {}".format(i+1,len(simfolders)))
     os.makedirs(dest_path+'/'+folder,exist_ok=True)  
     if args.local:
         result = csr.SimulationResults(args.folder+'/'+folder,dest_path+'/'+folder,is_remote=False)

@@ -66,11 +66,16 @@ class SimulationResults(object):
                 simulation_data.loc[timestep,'NMonomers'] = snapshot.get_number_monomers()
                 simulation_data.loc[timestep,'PDI'] = snapshot.get_pdi()
                 simulation_data.loc[timestep,'DOP'] = snapshot.get_dop()
-                (newpAA,newpBB,newpAB,newPBA) = snapshot.get_all_probs() 
+                (newpAA,newpBB,newpAB,newPBA) = snapshot.get_all_probs()
+                (new_cpAA,new_cpBB,new_cpAB,new_cPBA) = snapshot.get_conditional_probs()
                 simulation_data.loc[timestep,'pAA'] = newpAA
                 simulation_data.loc[timestep,'pBB'] = newpBB
                 simulation_data.loc[timestep,'pAB'] = newpAB
                 simulation_data.loc[timestep,'pBA'] = newpAB
+                simulation_data.loc[timestep,'cpAA'] = new_cpAA
+                simulation_data.loc[timestep,'cpBB'] = new_cpBB
+                simulation_data.loc[timestep,'cpAB'] = new_cpAB
+                simulation_data.loc[timestep,'cpBA'] = new_cpAB
                 if i==0:
                     No = snapshot.get_number_monomers()
                     simulation_data.loc[timestep,'p']=0.
@@ -86,14 +91,15 @@ class SimulationResults(object):
 
     def analyze_trajectory_by_function(self,local_path):
         print(local_path+'/bonddump.dump')
-        bdump = dump(r''+local_path+'/bonddump.dump')
-        snapshots = trj.construct_molecule_trajectory(local_path+'/system.data',bdump)
-        timesteps = bdump.time()
-        simulation_data = pd.DataFrame(columns=['block_lengths'],
-                                        index=timesteps,dtype=float)
+        #bdump = dump(r''+local_path+'/bonddump.dump')
+        #snapshots = trj.construct_molecule_trajectory(local_path+'/system.data',bdump)
+        #timesteps = bdump.time()
+        num_timesteps = dump_generator.get_number_of_timesteps(local_path+'/atom_trj.lammpstrj')
+        snapshots = trj.construct_molecule_trajectory_from_generators(local_path+'/system.data',local_path+'/bonddump.dump',local_path+'/atom_trj.lammpstrj')
+        simulation_data = pd.DataFrame(columns=['block_lengths'],dtype=float)
         sequence_data={}
-        with tqdm(total=len(timesteps)) as pbar:
-            for i,(timestep,snapshot) in enumerate(snapshots):
+        with tqdm(total=num_timesteps) as pbar:
+            for timestep,snapshot in enumerate(snapshots):
                 sequences = [snapshot.get_chain_sequence_filtered(chain) for chain in snapshot.get_sequences()]
                 conditional_probs = snapshot.get_conditional_probs()
                 conditional_probs_dict = {'pAA': conditional_probs[0],
