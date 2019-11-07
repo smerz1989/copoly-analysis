@@ -45,9 +45,18 @@ class SimulationResults(object):
         else:
             if not self.sim_path==local_path:
                 print("Sim path is: {}\n\nLocal path is {}".format(self.sim_path,local_path))
-                shutil.copy2(self.sim_path+'/atom_trj.lammpstrj',local_path)
-                shutil.copy2(self.sim_path+'/bonddump.dump',local_path)
-                shutil.copy2(self.sim_path+'/system.data',local_path)
+                try:
+                    shutil.copy2(self.sim_path+'/atom_trj.lammpstrj',local_path)
+                except shutil.SameFileError:
+                    print('File atom_trj.lammpstrj already in destination folder')
+                try:
+                    shutil.copy2(self.sim_path+'/bonddump.dump',local_path)
+                except shutil.SameFileError:
+                    print('File bonddump.dump already in destination folder')
+                try:
+                    shutil.copy2(self.sim_path+'/system.data',local_path)
+                except shutil.SameFileError:
+                    print('File system.data already in destination folder')
         self.bdump_path = local_path+'/bonddump.dump'
         self.atomtrj_path = local_path+'/atom_trj.lammpstrj'
         self.data_file_path = local_path+'/system.data'
