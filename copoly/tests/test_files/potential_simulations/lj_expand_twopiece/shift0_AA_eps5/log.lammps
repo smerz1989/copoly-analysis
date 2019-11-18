@@ -1,0 +1,21 @@
+LAMMPS (7 Aug 2019)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:93)
+  using 1 OpenMP thread(s) per MPI task
+
+
+# ----------------- Init Section -----------------
+
+include "system.in.init"
+        units lj
+        atom_style angle
+        pair_style hybrid lj/expand/twopiece 2.5 soft/shift 0.3 zero 1 morse 2.5
+        bond_style hybrid harmonic
+        angle_style hybrid harmonic
+        special_bonds lj 0.0 0.0 0.0
+
+
+# ----------------- Atom Definition Section -----------------
+
+read_data "system.data"
+ERROR: Unknown identifier in data file: 0  crossterms (src/read_data.cpp:1182)
+Last command: read_data "system.data"

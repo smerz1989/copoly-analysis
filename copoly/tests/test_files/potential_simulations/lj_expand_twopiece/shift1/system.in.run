@@ -1,0 +1,17 @@
+  dump dxyz all atom 1000 poly.lammpstrj
+  group atom1 id 1
+  group atom2 id 2
+  compute pair_data all pair/local dist eng 
+
+  fix ffreeze all setforce 0 0 0
+  dump 1 all local 10 pair_energy.data index c_pair_data[1] c_pair_data[2]
+
+  thermo 200
+  timestep 0.001
+  run   1000
+  variable a loop 80
+  label loop 
+  displace_atoms atom2 move 0 -0.02 0
+  run   1000
+  next a
+  jump SELF loop

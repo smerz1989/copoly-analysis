@@ -1,0 +1,7 @@
+import "copolyff.lt"
+
+APARTICLE{
+    write("Data Atoms"){
+        $atom:A $mol:. @atom:COPOLYFF/A 0. 0. 0.
+    }
+}

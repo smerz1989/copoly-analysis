@@ -1,0 +1,77 @@
+COPOLYFF{
+    write_once("Data Masses"){
+        @atom:NP 1
+        @atom:GR 0.5
+        @atom:A  0.5
+        @atom:B  0.5
+        @atom:SA 0.25
+        @atom:ACTIVE 0.25
+        @atom:DORMANT 0.25
+        @atom:ANCHOR 0.25
+    }
+    write_once("In Init"){
+        units lj
+        atom_style angle
+        pair_style hybrid lj/expand/twopiece 2.5 lj/twopiece 2.5 soft/shift 0.3 zero 1 morse 2.5
+        bond_style hybrid harmonic
+        angle_style hybrid harmonic
+        special_bonds lj 0.0 0.0 0.0
+    }
+    write_once("In Settings"){
+       pair_coeff @atom:GR @atom:GR lj/expand/twopiece 0.5 1 0.5 0.
+        pair_coeff @atom:A @atom:A lj/twopiece 5.0 1 0.5
+        pair_coeff @atom:B @atom:B lj/twopiece 1.0 1 0.5
+        pair_coeff @atom:A @atom:B lj/twopiece 1.0 1 0.5
+        pair_coeff @atom:GR @atom:A lj/expand/twopiece 0.5 1 0.5 0.
+        pair_coeff @atom:GR @atom:B lj/expand/twopiece 0.5 1 0.5 0.
+        
+        pair_coeff @atom:SA @atom:SA soft/shift 1.5 0.2
+        pair_coeff @atom:SA @atom:GR zero
+        pair_coeff @atom:SA @atom:NP zero
+        pair_coeff @atom:SA @atom:A zero
+        pair_coeff @atom:SA @atom:B zero
+
+        pair_coeff @atom:ANCHOR @atom:ANCHOR lj/expand/twopiece 0.5 1 0.5 0.
+        pair_coeff @atom:ANCHOR @atom:SA lj/expand/twopiece 0.5 1 0.5 0.
+        pair_coeff @atom:ANCHOR @atom:GR zero
+        pair_coeff @atom:ANCHOR @atom:NP morse 100 4 0.5
+        pair_coeff @atom:ANCHOR @atom:A zero
+        pair_coeff @atom:ANCHOR @atom:B zero
+        pair_coeff @atom:ANCHOR @atom:ACTIVE zero
+        pair_coeff @atom:ANCHOR @atom:DORMANT zero
+
+        pair_coeff @atom:ACTIVE @atom:ACTIVE soft/shift 1.5 0.2
+        pair_coeff @atom:ACTIVE @atom:GR zero
+        pair_coeff @atom:ACTIVE @atom:NP zero
+        pair_coeff @atom:ACTIVE @atom:A zero
+        pair_coeff @atom:ACTIVE @atom:B zero
+        pair_coeff @atom:ACTIVE @atom:DORMANT soft/shift 1.5 0.2
+
+        pair_coeff @atom:DORMANT @atom:DORMANT soft/shift 1.5 0.2
+        pair_coeff @atom:DORMANT @atom:GR zero
+        pair_coeff @atom:DORMANT @atom:NP zero
+        pair_coeff @atom:DORMANT @atom:A zero
+        pair_coeff @atom:DORMANT @atom:B zero
+
+        pair_coeff @atom:NP @atom:NP lj/expand/twopiece 0.5 1 0.8 0.
+        pair_coeff @atom:NP @atom:GR lj/expand/twopiece 0.5 1 0.8 0.
+        pair_coeff @atom:NP @atom:A lj/expand/twopiece 0.5 1 0.8 0.
+        pair_coeff @atom:NP @atom:B lj/expand/twopiece 0.5 1 0.8 0.
+
+ 
+        bond_coeff @bond:ASA harmonic 1000 0.4
+        bond_coeff @bond:BSA harmonic 1000 0.4
+        bond_coeff @bond:SASA harmonic 1000 0.15       
+ 
+        angle_coeff @angle:SAASA harmonic 20 180
+        angle_coeff @angle:SABSA harmonic 20 180
+        angle_coeff @angle:SASAB harmonic 20 180
+        angle_coeff @angle:SASANP harmonic 20 180
+    }
+    write_once("Data Angles By Type"){
+        @angle:SAASA @atom:SA @atom:A @atom:SA @bond:* @bond:*
+        @angle:SABSA @atom:SA @atom:B @atom:SA @bond:* @bond:*
+        @angle:SASAB @atom:SA @atom:SA @atom:B @bond:* @bond:*
+        @angle:SASAB @atom:SA @atom:SA @atom:A @bond:* @bond:*
+    }
+}

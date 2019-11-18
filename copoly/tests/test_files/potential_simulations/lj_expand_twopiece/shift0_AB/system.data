@@ -1,0 +1,32 @@
+LAMMPS Description
+
+     2  atoms
+     0  bonds
+     0  angles
+     0  dihedrals
+     0  impropers
+
+     8  atom types
+     3  bond types
+     4  angle types
+
+  -20 20 xlo xhi
+  -20 20 ylo yhi
+  -20 20 zlo zhi
+
+Masses
+
+1 1  # NP
+2 0.5  # GR
+3 0.5  # A
+4 0.5  # B
+5 0.25  # SA
+6 0.25  # ACTIVE
+7 0.25  # DORMANT
+8 0.25  # ANCHOR
+
+Atoms  # angle
+
+1 1 3 0.0 0.0 0.0
+2 2 4 0.0 2.4 0.0
+
