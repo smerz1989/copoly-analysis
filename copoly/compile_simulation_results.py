@@ -23,6 +23,11 @@ class SimulationResults(object):
         if is_remote:
             self.server_connection = svc.ServerConnection()
         self.local_path = os.path.abspath(local_path)
+        try:
+            self.params = self.dirname_to_params(self.sim_path)
+        except IndexError:
+            self.params=None
+            print("Folder doesn't have all starting parameters in foldername, continuing without them.")
 
     def is_trajectory_downloaded(self,local_path):
         file_path = os.path.abspath(local_path)
@@ -30,7 +35,20 @@ class SimulationResults(object):
                          os.path.exists(local_path+'/bonddump.dump'),
                          os.path.exists(local_path+'/system.data'))
         return(traj_existing)
- 
+
+    @staticmethod 
+    def dirname_to_params(dirname):
+        params={}
+        try:
+            params['epsAA'] = float(re.findall(r'([0-9]+\.?[0-9]?[0-9]?)epsAA',dirname)[0])
+            params['epsAB'] = float(re.findall(r'([0-9]+\.?[0-9]?[0-9]?)epsAB',dirname)[0])
+            params['epsBB'] = float(re.findall(r'([0-9]+\.?[0-9]?[0-9]?)epsBB',dirname)[0])
+            params['StartMonomers'] = float(re.findall(r'([0-9]+\.?[0-9]?[0-9]?)monomers',dirname)[0])
+            params['Starting_fA'] = float(re.findall(r'([0-9]+\.?[0-9]?[0-9]?)percentA',dirname)[0])/100
+        except IndexError:
+            raise IndexError('Missing parameters in filename')
+        return(params)
+
 
     def get_trajectory(self,local_path,redownload=False):
         if self.is_remote:
@@ -86,7 +104,10 @@ class SimulationResults(object):
                 simulation_data.loc[timestep,'cpAB'] = new_cpAB
                 simulation_data.loc[timestep,'cpBA'] = new_cpAB
                 if i==0:
-                    No = snapshot.get_number_monomers()
+                    if self.params:
+                        No=self.params['StartMonomers']
+                    else: 
+                        No = snapshot.get_number_monomers()
                     simulation_data.loc[timestep,'p']=0.
                 else:
                     N = simulation_data.loc[timestep,'NMonomers']+snapshot.get_number_chains()

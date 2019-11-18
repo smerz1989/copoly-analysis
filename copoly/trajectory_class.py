@@ -435,8 +435,12 @@ class SimulationSnapshot(object):
     def get_number_chains(self):
         return(len([length for length in self.chain_lengths if length>1]))
 
-    def get_number_monomers(self):
-        return(len([length for length in self.chain_lengths if length==1]))
+    def get_number_monomers(self,mon_types=[3,4]):
+        atoms = np.array(self.monomers).flatten()
+        atom_types = [self.topology.vs[atom]['Atom'][2] for atom in atoms]
+        types, counts = np.unique(atom_types,return_counts=True)
+        number_of_monomers_total = sum([counts[types==mtype][0] for mtype in mon_types])
+        return(number_of_monomers_total)
 
     def get_monomer_type(self,monomer):
         node_types = [node['Atom'][2] for node in self.topology.vs]
@@ -446,11 +450,13 @@ class SimulationSnapshot(object):
     def unravel_chain_generator(self,chain_generator):
         [chainnode for node in chain_generator]
 
-    def get_monomer_type_fraction(self,atom_type=3):
+    def get_monomer_type_fraction(self,atom_type=3,other_types=[4]):
         atoms = np.array(self.monomers).flatten()
         atom_types = [self.topology.vs[atom]['Atom'][2] for atom in atoms]
         types, counts = np.unique(atom_types,return_counts=True)
-        return(counts[types==atom_type][0]/len(self.monomers))
+        number_monomers_of_type = counts[types==atom_type][0]
+        number_of_monomers_total = sum([counts[types==mtype][0] for mtype in other_types+[atom_type]])
+        return(number_monomers_of_type/number_of_monomers_total)
 
     def get_chain_type_fraction(self,atom_type=3):
         atoms = itertools.chain(self.chains)
@@ -487,10 +493,6 @@ class SimulationSnapshot(object):
         numBB = len(re.findall(r'(?='+str(b_type_id)*2+')',filtered_seq)) 
         numAB = len(re.findall(r'(?='+str(a_type_id)+str(b_type_id)+')',filtered_seq))
         numBA = len(re.findall(r'(?='+str(b_type_id)+str(a_type_id)+')',filtered_seq))
-        #numAA_oneshift = len(re.findall(r'(?='+str(a_type_id)*2+')',filtered_seq_one_shift))
-        #numBB_oneshift = len(re.findall(r'(?='+str(b_type_id)*2+')',filtered_seq_one_shift)) 
-        #numAB_oneshift = len(re.findall(r'(?='+str(a_type_id)+str(b_type_id)+')',filtered_seq_one_shift))
-        #numBA_oneshift = len(re.findall(r'(?='+str(b_type_id)+str(a_type_id)+')',filtered_seq_one_shift))
         return((numAA,numBB,numAB,numBA))        
 
     def get_all_probs(self):

@@ -4,9 +4,6 @@ from itertools import islice
 from math import ceil
 import re
 
-#def read_file_bash(filename,start,finish):
-#    sb.check_output(['head'])
-
 def get_number_of_timesteps(filename,header_size=9):
     print("Getting number of timesteps")
     with open('tmp.out','w') as tmp:
@@ -29,12 +26,13 @@ def read_dump(filename,header_size=9,scale=False):
                 box_bounds = np.array([list(map(float,line.split(' '))) for line in header.split('\n')[-5:-2]])
                 lines = [datafile.readline() for i in range(num_entries)]
                 data1D = np.fromstring(' '.join(lines).replace('\n',' '),sep = ' ')
-                data = data1D.reshape((num_entries,ceil(len(data1D)/num_entries)))
-                #print("Box bounds: {}".format(box_bounds))
-                #print("Data before scale {}".format(data))
+                try:
+                    data = data1D.reshape((num_entries,ceil(len(data1D)/num_entries)))
+                except ZeroDivisionError:
+                    print("No entries for timestep returning empty data frame")
+                    data=[]
                 if scale:
                     data[:,-3:] = data[:,-3:]*(box_bounds[0,1]-box_bounds[0,0])+box_bounds[0,0]
-                #print("Data after scale {}".format(data))
                 yield(timestep,data)
             except EOFError as e:
                 break
