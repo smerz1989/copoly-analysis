@@ -9,5 +9,16 @@ install:
   #- pip install -r requirements.txt
   - pip install .
 
+before_script:
+  - cd ${HOME}
+  - git clone -b stable_7Aug2019 https://github.com/lammps/lammps.git
+  - cd lammps
+  - mkdir build
+  - cd build
+  - cmake -D PKG_PYTHON=on -D PKG_MC=on -D PKG_MOLECULE=on -D PKG_RIGID=on -D PKG_USER-MISC=on -D CMAKE_INSTALL_PREFIX=${VIRTUAL_ENV} ../cmake
+  - make
+  - make install
+  - cd ${TRAVIS_BUILD_DIR}
+
 script:
   - pytest
