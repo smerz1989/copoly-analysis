@@ -1,0 +1,10 @@
+LAMMPS (7 Aug 2019)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:93)
+  using 1 OpenMP thread(s) per MPI task
+
+
+# ----------------- Init Section -----------------
+
+include "system.in.init"
+ERROR on proc 0: Cannot open input script system.in.init (src/input.cpp:1046)
+Last command: include "system.in.init"

@@ -44,9 +44,9 @@ class Simulation(object):
     def change_monomer_attraction(self):
         cur_path = os.path.abspath('.')
         os.chdir(self.lt_dir)
-        sb.call(["sed","-i",'/\@atom\:A\ \@atom\:A/ s/twopiece\ [0-9]\?\.\?[0-9]\?/twopiece\ '+str(self.eAA)+'/g','copolyff.lt'])
-        sb.call(["sed","-i",'/\@atom\:A\ \@atom\:B/ s/twopiece\ [0-9]\?\.\?[0-9]\?/twopiece\ '+str(self.eAB)+'/g','copolyff.lt'])
-        sb.call(["sed","-i",'/\@atom\:B\ \@atom\:B/ s/twopiece\ [0-9]\?\.\?[0-9]\?/twopiece\ '+str(self.eBB)+'/g','copolyff.lt'])
+        sb.call(["sed","-i",'/\@atom\:A\ \@atom\:A/ s/twopiece\ [0-9]\?\.\?[0-9]\?/twopiece\ '+"{:0.6f}".format(self.eAA)+'/g','copolyff.lt'])
+        sb.call(["sed","-i",'/\@atom\:A\ \@atom\:B/ s/twopiece\ [0-9]\?\.\?[0-9]\?/twopiece\ '+"{:0.6f}".format(self.eAB)+'/g','copolyff.lt'])
+        sb.call(["sed","-i",'/\@atom\:B\ \@atom\:B/ s/twopiece\ [0-9]\?\.\?[0-9]\?/twopiece\ '+"{:0.6f}".format(self.eBB)+'/g','copolyff.lt'])
         os.chdir(cur_path)
 
     def change_extent_of_reaction(self):

@@ -2,6 +2,7 @@ import os
 import paramiko as pk
 import re
 import sys
+import bz2
 
 class ServerConnection(object):
     def __init__(self):
@@ -45,13 +46,19 @@ class ServerConnection(object):
         ftp_client.put(local_path,remote_path,callback=self.print_progress)
         ftp_client.close()
 
-    def get_file(self,remote_path,local_path):
+    def get_file(self,remote_path,local_path,compress=False):
         ftp_client = self.ssh_client.open_sftp()
+        if compress:
+           self.compress_file(remote_path)
+           remote_path = remote_path+'.bz2'
         print("Downloading file: {} from server".format(local_path))
         ftp_client.get(remote_path,local_path,callback=self.print_progress)
         sys.stdout.write('\n')
         sys.stdout.flush()
         ftp_client.close()
+
+    def compress_file(self,remote_path):
+        self.ssh_client.exec_command(r'bzip2 '+remote_path)
 
     def print_progress(self,transferred, toBeTransferred):
         progress = transferred/int(toBeTransferred)*100

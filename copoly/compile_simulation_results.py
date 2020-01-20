@@ -50,7 +50,7 @@ class SimulationResults(object):
         return(params)
 
 
-    def get_trajectory(self,local_path,redownload=False):
+    def get_trajectory(self,local_path,redownload=False,compress=False):
         if self.is_remote:
             traj_existing = self.is_trajectory_downloaded(local_path)
             if redownload or not traj_existing[0]:

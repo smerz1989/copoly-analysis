@@ -439,7 +439,10 @@ class SimulationSnapshot(object):
         atoms = np.array(self.monomers).flatten()
         atom_types = [self.topology.vs[atom]['Atom'][2] for atom in atoms]
         types, counts = np.unique(atom_types,return_counts=True)
-        number_of_monomers_total = sum([counts[types==mtype][0] for mtype in mon_types])
+        try:
+            number_of_monomers_total = sum([counts[types==mtype][0] for mtype in mon_types if mtype in list(map(int,types))])
+        except IndexError:
+           print("The unique counts for atom types {} and {} returned NULL ({}) for types {} and arrays {}".format(mon_types[0],mon_types[1],counts,types,atom_types))
         return(number_of_monomers_total)
 
     def get_monomer_type(self,monomer):
@@ -454,8 +457,8 @@ class SimulationSnapshot(object):
         atoms = np.array(self.monomers).flatten()
         atom_types = [self.topology.vs[atom]['Atom'][2] for atom in atoms]
         types, counts = np.unique(atom_types,return_counts=True)
-        number_monomers_of_type = counts[types==atom_type][0]
-        number_of_monomers_total = sum([counts[types==mtype][0] for mtype in other_types+[atom_type]])
+        number_monomers_of_type = 0 if len(counts[types==atom_type])==0 else counts[types==atom_type][0]
+        number_of_monomers_total = sum([counts[types==mtype][0] for mtype in other_types+[atom_type] if mtype in list(map(int,types))])
         return(number_monomers_of_type/number_of_monomers_total)
 
     def get_chain_type_fraction(self,atom_type=3):
