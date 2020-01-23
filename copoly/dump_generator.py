@@ -59,7 +59,7 @@ def read_dump_compressed(filename,header_size=9,scale=False):
 def read_dump(filename,header_size=9,scale=False):
     cur_line_number=0
     _ ,file_extension = os.path.splitext(filename)
-    if file_extension=='.lammpstrj':
+    if file_extension!='.bz2':
         with open(filename,'r') as datafile:
             while True:
                 try:
