@@ -49,7 +49,13 @@ class ServerConnection(object):
     def get_file(self,remote_path,local_path,compress=False):
         ftp_client = self.ssh_client.open_sftp()
         if compress:
-           self.compress_file(remote_path)
+           print("Compressing file: {} on server".format(local_path))
+           _,stdout,_ = self.compress_file(remote_path)
+           exit_status = stdout.channel.recv_exit_status()
+           if exit_status==0:
+              print("File compressed continuing to download")
+           #else:
+           #   raise OSError("File could not be compressed on remote machine, bzcat returned exit status: {}".format(exit_status))
            remote_path = remote_path+'.bz2'
         print("Downloading file: {} from server".format(local_path))
         ftp_client.get(remote_path,local_path,callback=self.print_progress)
@@ -58,7 +64,8 @@ class ServerConnection(object):
         ftp_client.close()
 
     def compress_file(self,remote_path):
-        self.ssh_client.exec_command(r'bzip2 '+remote_path)
+        stdin, stdout, stderr = self.ssh_client.exec_command(r'bzip2 '+remote_path)
+        return(stdin,stdout, stderr)
 
     def print_progress(self,transferred, toBeTransferred):
         progress = transferred/int(toBeTransferred)*100

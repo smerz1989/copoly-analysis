@@ -16,6 +16,7 @@ parser.add_argument('-l','--local',dest='local',action='store_true',help='Set th
 parser.add_argument('-c','--chain-only',dest='only_chain',action='store_true',help='Analyze just chain block lengths.')
 parser.add_argument('--nooverwrite',dest='no_overwrite',action='store_true',help='If flag is used script will not download or analyze simulation data of folders that are already present locally')
 parser.add_argument('--no-overwrite-chains',dest='no_overwrite_chains',action='store_true',help='If flag is used script will not download or analyze simulation data of folders that have seq_analysis.json locally')
+parser.add_argument('--compress',dest='compress',action='store_true',help="If flag is used download and analyze trajectory and dump files as bzip2 compressed files.")
 
 args = parser.parse_args()
 
@@ -61,11 +62,14 @@ for i,folder in enumerate(simfolders):
         result = csr.SimulationResults(os.path.join(os.path.abspath(args.folder),folder),os.path.join(os.path.abspath(dest_path),folder),is_remote=False)
     else:
         print("Args.folder is {}".format(args.folder))
-        result = csr.SimulationResults(args.folder+'/'+folder,dest_path+'/'+folder)
-    result.get_trajectory(os.path.join(dest_path,folder))
+        result = csr.SimulationResults(args.folder+'/'+folder,dest_path+'/'+folder,compressed=args.compress)
+    if args.compress:
+        result.get_compressed_trajectory(os.path.join(dest_path,folder))
+    else:
+        result.get_trajectory(os.path.join(dest_path,folder))
     if not args.only_chain:
         print(dest_path+'/'+folder)
-        data = result.analyze_trajectory(dest_path+'/'+folder)
+        data = result.analyze_trajectory(dest_path+'/'+folder,compressed=args.compress)
         data.to_csv(dest_path+'/'+folder+'/traj_analysis.csv')
         result.plot_trajectory(data)
     else:
