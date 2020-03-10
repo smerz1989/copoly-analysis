@@ -17,6 +17,7 @@ parser.add_argument('-c','--chain-only',dest='only_chain',action='store_true',he
 parser.add_argument('--nooverwrite',dest='no_overwrite',action='store_true',help='If flag is used script will not download or analyze simulation data of folders that are already present locally')
 parser.add_argument('--no-overwrite-chains',dest='no_overwrite_chains',action='store_true',help='If flag is used script will not download or analyze simulation data of folders that have seq_analysis.json locally')
 parser.add_argument('--compress',dest='compress',action='store_true',help="If flag is used download and analyze trajectory and dump files as bzip2 compressed files.")
+parser.add_argument('--filter',dest='filter',action='store_true',help="If flag is used, filter trajectory before downloading and analyzing trajectory.")
 
 args = parser.parse_args()
 
@@ -63,10 +64,16 @@ for i,folder in enumerate(simfolders):
     else:
         print("Args.folder is {}".format(args.folder))
         result = csr.SimulationResults(args.folder+'/'+folder,dest_path+'/'+folder,compressed=args.compress)
+
+    # Decide which method to use to download trajectory
     if args.compress:
         result.get_compressed_trajectory(os.path.join(dest_path,folder))
+    elif args.filter:
+        result.get_filtered_trajectory(os.path.join(dest_path,folder))
     else:
         result.get_trajectory(os.path.join(dest_path,folder))
+
+    # Return full sequence data or return just numeric polymerization data.
     if not args.only_chain:
         print(dest_path+'/'+folder)
         data = result.analyze_trajectory(dest_path+'/'+folder,compressed=args.compress)

@@ -106,3 +106,54 @@ def read_dump(filename,header_size=9,scale=False):
                 except EOFError as e:
                     break
 
+
+def read_dump_w_header(filename,header_size=9,scale=False):
+    cur_line_number=0
+    _ ,file_extension = os.path.splitext(filename)
+    if file_extension!='.bz2':
+        with open(filename,'r') as datafile:
+            while True:
+                try:
+                    header = ''.join(datafile.readline() for i in range(header_size))
+                    if header=='':
+                        break
+                    header_data = re.findall(r'[0-9]+',header)
+                    timestep=header_data[0]
+                    num_entries = int(header_data[1])
+                    box_bounds = np.array([list(map(float,line.split(' '))) for line in header.split('\n')[-5:-2]])
+                    lines = [datafile.readline() for i in range(num_entries)]
+                    data1D = np.fromstring(' '.join(lines).replace('\n',' '),sep = ' ')
+                    try:
+                        data = data1D.reshape((num_entries,ceil(len(data1D)/num_entries)))
+                    except ZeroDivisionError:
+                        print("No entries for timestep returning empty data frame")
+                        data=[]
+                    if scale:
+                        data[:,-3:] = data[:,-3:]*(box_bounds[0,1]-box_bounds[0,0])+box_bounds[0,0]
+                    yield(timestep,header,data)
+                except EOFError as e:
+                    break
+    else:
+       with bz2.open(filename,'r') as datafile:
+            while True:
+                try:
+                    header = ''.join(datafile.readline().decode('utf-8') for i in range(header_size))
+                    if header=='':
+                        break
+                    header_data = re.findall(r'[0-9]+',header)
+                    timestep=header_data[0]
+                    num_entries = int(header_data[1])
+                    box_bounds = np.array([list(map(float,line.split(' '))) for line in header.split('\n')[-5:-2]])
+                    lines = [datafile.readline().decode('utf-8') for i in range(num_entries)]
+                    data1D = np.fromstring(' '.join(lines).replace('\n',' '),sep = ' ')
+                    try:
+                        data = data1D.reshape((num_entries,ceil(len(data1D)/num_entries)))
+                    except ZeroDivisionError:
+                        print("No entries for timestep returning empty data frame")
+                        data=[]
+                    if scale:
+                        data[:,-3:] = data[:,-3:]*(box_bounds[0,1]-box_bounds[0,0])+box_bounds[0,0]
+                    yield(timestep,header,data)
+                except EOFError as e:
+                    break
+

@@ -43,7 +43,7 @@ class ServerConnection(object):
     def send_file(self,local_path,remote_path):
         ftp_client = self.ssh_client.open_sftp()
         print("Transferring file: {} to server".format(local_path))
-        ftp_client.put(local_path,remote_path,callback=self.print_progress)
+        ftp_client.put(local_path,remote_path,callback=self.print_progress,confirm=True)
         ftp_client.close()
 
     def get_file(self,remote_path,local_path,compress=False):

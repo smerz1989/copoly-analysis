@@ -14,6 +14,7 @@ import re
 import igraph
 import subprocess as sb
 import pandas as pd
+from scipy.spatial.distance import pdist,cdist
 
 class Molecule(object):
     """This class is used to represent a molecule in a simulation and holds all
@@ -220,6 +221,18 @@ def load_bond_trajectory_old(filename):
     return(bond_snapshots)
 
 def load_bond_trajectory(bdump):
+    """Generator that steps through snapshots in LAMMPS bond dump file when passed a pizzapy dump generator.
+
+    Parameters
+    ----------
+    bdump : pizzapy dump generator
+        A pizzapy dump generator created from the simulation's bond dump file.
+
+    Yields
+    ------
+    timestep, bonds: int, int Array
+        Returns a tuple containing the timestep and a snapshot of the bonds in the simulation at that timestep.   
+    """
     times = bdump.time()
     for timestep in times:
         b_type,batom1,batom2 = bdump.vecs(timestep,"c_bcomp[1]","c_bcomp[2]","c_bcomp[3]")
@@ -259,11 +272,17 @@ def construct_molecule_trajectory(datafile,bondtrajectory,atomtrajectory=None):
 
     Parameters
     ----------
-    filename : str
-        The name of the LAMMPS input file that contains the molecules
+    datafile: str
+        The name of the LAMMPS data file that describes the system at start.
 
-    Returns
-    -------
+    bondtrajectory: pizzapy dump generator
+        A pizzapy generator created from the LAMMPS dump file of the simulation's bonds over time.
+
+    atomtrajectory: pizzapy dump generator
+        A pizzapy generator created from the LAMMPS dump file of the simulation's atoms over time.
+
+    Yields
+    ------
     molecules : Molecule List
         A list of Molecule objects with the data specified by the LAMMPS input file passed in.
     """
@@ -282,13 +301,20 @@ def construct_molecule_trajectory_from_generators(datafile,bondfile,atomfile):
 
     Parameters
     ----------
-    filename : str
-        The name of the LAMMPS input file that contains the molecules
+    datafile: str
+        The name of the LAMMPS data file that describes the system at start.
+     
+    bondfile: str
+        The name of the LAMMPS dump file containing the simulation's bonds over time
 
-    Returns
-    -------
-    molecules : Molecule List
-        A list of Molecule objects with the data specified by the LAMMPS input file passed in.
+    atomfile: str
+        The name of the LAMMPS dump file containing the simulation's atom positions over time.
+
+    Yields
+    ------
+    SimulationSnapshot
+        A snapshot of the simulation containing the state of the bonds and atom positions at that timestep, 
+            SimulationSnapshot objects have several method functions for determining polymerization progress and RDFs.
     """
     atoms,atoms_array = loadAtoms(datafile)
     bond_snapshots = dump_generator.read_dump(bondfile)
@@ -357,7 +383,23 @@ class SimulationSnapshot(object):
         self.monomers = [molecule for molecule in self.molecules if len(molecule)==3]
         self.chains = [molecule for molecule in self.molecules if len(molecule)>3]
         self.chain_lengths = [int(len(molecule)/3) for molecule in self.molecules]
-    
+
+    #def get_KDTree(self,atype_id=3,btype_id=4):
+    #    self.KDTree = cKDTree(self.atoms_array[:,3:6])
+    #    self.AKDTree = cKDTree(self.atoms_array[self.atoms_array[:,2]==atype_id][:,3:6])
+    #    self.BKDTree = cKDTree(self.atoms_array[self.atoms_array[:,2]==btype_id][:,3:6])
+
+    def get_monomer_RDF(self,monomertypes=[3,4],nbins=200):
+        atoms_array = self.atoms_array[np.isin(self.atoms_array[:,2],monomertypes)][:,-3:]
+        distances = pdist(atoms_array)
+        return np.histogram(distances.ravel(),bins=nbins)
+
+    def get_type_RDF(self,atomtype1,atomtype2,nbins=200):
+        atoms_array1 = self.atoms_array[self.atoms_array[:,2]==atomtype1][:,-3:]
+        atoms_array2 = self.atoms_array[self.atoms_array[:,2]==atomtype2][:,-3:]
+        distances = cdist(atoms_array1,atoms_array2)
+        return np.histogram(distances.ravel(),bins=nbins)
+
     def guess_simulation_bounds(self):
         xmin,xmax = (np.amin(self.atoms_array[:,3]),np.amax(self.atoms_array[:,3]))
         ymin,ymax = (np.amin(self.atoms_array[:,4]),np.amax(self.atoms_array[:,4]))

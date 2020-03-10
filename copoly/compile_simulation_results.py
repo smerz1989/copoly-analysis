@@ -96,6 +96,33 @@ class SimulationResults(object):
         self.atomtrj_path = local_path+'/atom_trj.lammpstrj.bz2'
         self.data_file_path = local_path+'/system.data'
 
+    def get_filtered_trajectory(self,local_path,redownload=False):
+        if self.is_remote:
+            traj_existing = self.is_trajectory_downloaded(local_path)
+            if redownload or not traj_existing[0]:
+                self.filter_file("atom_trj.lammpstrj","no")
+                self.server_connection.get_file(os.path.join(self.sim_path,'atom_trj.lammpstrj.filtered'),os.path.join(local_path,'atom_trj.lammpstrj'))
+            if redownload or not traj_existing[1]:
+                self.filter_file('bonddump.dump',"yes")
+                self.server_connection.get_file(os.path.join(self.sim_path,'bonddump.dump.filtered'),os.path.join(local_path,'bonddump.dump'))
+            if redownload or not traj_existing[2]:
+                self.server_connection.get_file(self.sim_path+'/system.data',local_path+'/system.data')
+        else:
+            print("Placeholder")
+
+    def filter_file(self,filename,isbonddump="no"):
+        remote_path = self.sim_path
+        filter_script_dir = os.path.dirname(svc.__file__)
+        dump_generator_location = os.path.join(filter_script_dir,'dump_generator.py')
+        filter_script_location = os.path.join(filter_script_dir,'filter_trajectory.py')
+        self.server_connection.send_file(dump_generator_location,os.path.join(remote_path,'dump_generator.py')) 
+        self.server_connection.send_file(filter_script_location,os.path.join(remote_path,'filter_trajectory.py'))
+        stdin, stdout, stderr = self.server_connection.ssh_client.exec_command('cd {};python filter_trajectory.py {} {}'.format(remote_path,filename,isbonddump),get_pty=True)
+        for line in iter(stdout.readline,""):
+            print(line,end="")
+        print("Finished filtering!!")
+
+
     def analyze_trajectory(self,local_path,compressed=False):
         print(r''+local_path+'/bonddump.dump')
         #bdump = dump(r''+local_path+'/bonddump.dump')

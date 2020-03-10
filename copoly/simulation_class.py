@@ -26,6 +26,7 @@ class Simulation(object):
         self.change_monomer_count()
         self.change_monomer_attraction()
         self.change_angle_strength()
+        print(self.xyz_dir)
         os.chdir(self.xyz_dir)
         try:
             sb.call([packmol_path],stdin=open('np.inp'))
@@ -40,6 +41,8 @@ class Simulation(object):
         sb.call(["sed","-i",'s/a\\"/a\\"\ extra\/special\/per\/atom\ 4\ extra\/bond\/per\/atom\ 2\ extra\/angle\/per\/atom\ 2/g',"system.in"])
         sb.call(["sed","-i",'s/\!\(.*\)\!/\$\{\\1\}/g',"system.in.run"])
         sb.call(["sed","-i",'s/\!(\(.*\))/\$(\\1)/g',"system.in.run"])
+        sb.call(["sed","-i",'s/\^/\%/g',"system.in.run"])
+        sb.call(["sed","-i",'s/\~\~/\=\=/g',"system.in.run"])
     
     def change_monomer_attraction(self):
         cur_path = os.path.abspath('.')
@@ -88,20 +91,22 @@ class Simulation(object):
             shutil.copy("submit.sbatch",dest_folder)
 
     def move_simulation_files_remote(self,dest_folder,slurm,suffix=''):
-        self.dest_folder = dest_folder+'/copoly_{}monomers_{}percentA_{}epsAA_{}epsBB_{}epsAB_{}anglestrength{}'.format(self.total_monomers,
+        print("Moving simulation to destination folder {}".format(dest_folder))
+        self.dest_folder = os.path.join(dest_folder,'copoly_{}monomers_{}percentA_{}epsAA_{}epsBB_{}epsAB_{}anglestrength{}'.format(self.total_monomers,
                                                                                                  int(100*self.monomer_A_fraction),
-                                                                                                    self.eAA,self.eBB,self.eAB,self.angle_strength,suffix)
+                                                                                                    self.eAA,self.eBB,self.eAB,self.angle_strength,suffix))
         print("Moving files to directory: {}".format(self.dest_folder))
         print("Checking if folder already exists")
         if not self.server_connection.check_if_file_exists(self.dest_folder):
             print("Folder doesn't exist creating it now")
             self.server_connection.mkdir(self.dest_folder)
-        for simfile in glob.glob(r''+self.lt_dir+'/system.*'):
-            self.server_connection.send_file(simfile,self.dest_folder+'/'+os.path.basename(simfile))
-        for simfile in glob.glob(r''+self.lt_dir+'/*.txt'):
-            self.server_connection.send_file(simfile,self.dest_folder+'/'+os.path.basename(simfile))
+        for simfile in glob.glob(r''+os.path.join(self.lt_dir,'system.*')):
+            print("Transferring file {}".format(simfile))
+            self.server_connection.send_file(simfile,os.path.join(self.dest_folder,os.path.basename(simfile)))
+        for simfile in glob.glob(r''+os.path.join(self.lt_dir,'*.txt')):
+            self.server_connection.send_file(simfile,os.path.join(self.dest_folder,os.path.basename(simfile)))
         if slurm:
-            self.server_connection.send_file(self.lt_dir+"/submit.sbatch",self.dest_folder+'/submit.sbatch')
+            self.server_connection.send_file(os.path.join(self.lt_dir,"submit.sbatch"),os.path.join(self.dest_folder,'submit.sbatch'))
 
     def analyze_simulation(self):
         print("placeholder")
@@ -118,6 +123,11 @@ class Simulation(object):
 
     def start_simulation_remote(self):
         stdin, stdout, stderr = self.server_connection.ssh_client.exec_command('cd {} \n sbatch submit.sbatch \n'.format(self.dest_folder))
+        command_statuscode = stdout.channel.recv_exit_status()
+        if command_statuscode == 0:
+            print("Sbatch returned succesful exit code {}".format(command_statuscode))
+        else:
+            print("sbatch returned error status code {}".format(command_statuscode))
         submit_status = stdout.read().decode('utf-8')
         print(submit_status)
         self.jobID = int(re.search(r'[0-9]+',submit_status).group(0))
