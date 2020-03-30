@@ -46,3 +46,7 @@ class TestSimulationSnapshot(unittest.TestCase):
         pAA,pBB,pAB,pBA = self.snapshot1_ABAB.get_all_probs()
         np.testing.assert_almost_equal([pAA,pBB,pAB,pBA],[0.0,0.0,0.5,0.5],err_msg="get_all_probs does not return corect pAA,pBB,pAB for uniform (all A and all B) polymers")
 
+    @unittest.skip("Skipping this unit test until RDF calculations are fixed.")
+    def test_RDF(self):
+        snapshot1 = self.snapshot1_AABB
+        print("here")

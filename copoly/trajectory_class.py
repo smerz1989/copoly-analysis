@@ -375,7 +375,7 @@ class SimulationSnapshot(object):
         self.bonds = bonds
         self.atoms_array = atoms_array
         if not atom_coords is None:
-            self.atoms_array[:,3:6]=atom_coords[:,2:5]
+            self.atoms_array[:,-3:]=atom_coords[:,-3:]
         self.anchor_atoms = atoms_array[atoms_array[:,2].astype(int)==anchor_atom_type]
         self.topology = self.create_topology_network(atoms_array,self.bonds)
         self.molecules = list(self.topology.components())
@@ -389,12 +389,12 @@ class SimulationSnapshot(object):
     #    self.AKDTree = cKDTree(self.atoms_array[self.atoms_array[:,2]==atype_id][:,3:6])
     #    self.BKDTree = cKDTree(self.atoms_array[self.atoms_array[:,2]==btype_id][:,3:6])
 
-    def get_monomer_RDF(self,monomertypes=[3,4],nbins=200):
+    def get_monomer_RDF(self,monomertypes=[3,4],nbins=50000):
         atoms_array = self.atoms_array[np.isin(self.atoms_array[:,2],monomertypes)][:,-3:]
         distances = pdist(atoms_array)
         return np.histogram(distances.ravel(),bins=nbins)
 
-    def get_type_RDF(self,atomtype1,atomtype2,nbins=200):
+    def get_type_RDF(self,atomtype1,atomtype2,nbins=50000):
         atoms_array1 = self.atoms_array[self.atoms_array[:,2]==atomtype1][:,-3:]
         atoms_array2 = self.atoms_array[self.atoms_array[:,2]==atomtype2][:,-3:]
         distances = cdist(atoms_array1,atoms_array2)

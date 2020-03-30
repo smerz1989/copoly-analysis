@@ -123,7 +123,7 @@ class SimulationResults(object):
         print("Finished filtering!!")
 
 
-    def analyze_trajectory(self,local_path,compressed=False):
+    def analyze_trajectory(self,local_path,compressed=False,rdf_frequency=25):
         print(r''+local_path+'/bonddump.dump')
         #bdump = dump(r''+local_path+'/bonddump.dump')
         if compressed:
@@ -136,6 +136,7 @@ class SimulationResults(object):
         simulation_data = pd.DataFrame(columns=['NMonomers','fA','fB','p','DOP','PDI','pAA','pBB','pAB','pBA'],
                                         dtype=float)
         i=0
+        total_data = {}
         with tqdm(total=num_timesteps) as pbar:
             for timestep,snapshot in enumerate(snapshots):
                 simulation_data.loc[timestep,'NMonomers'] = snapshot.get_number_monomers()
@@ -162,9 +163,18 @@ class SimulationResults(object):
                     simulation_data.loc[timestep,'p'] = ((No-N)/No)
                 simulation_data.loc[timestep,'fA']= snapshot.get_monomer_type_fraction()
                 simulation_data.loc[timestep,'fB']=1-simulation_data.loc[timestep,'fA']
+                if timestep%rdf_frequency==0:
+                    monomerRDF = snapshot.get_monomer_RDF()
+                    rdfAA =  snapshot.get_type_RDF(3,3)
+                    rdfBB =  snapshot.get_type_RDF(4,4)
+                    rdfAB =  snapshot.get_type_RDF(3,4)
+                    total_data[timestep] = {'rdfMonomers':[monomerRDF[0].tolist(),monomerRDF[1].tolist()],
+                                            'rdfAA': [rdfAA[0].tolist(),rdfAA[1].tolist()],
+                                            'rdfBB':[rdfBB[0].tolist(),rdfBB[1].tolist()],
+                                            'rdfAB':[rdfAB[0].tolist(),rdfAB[1].tolist()]}
                 i+=1
                 pbar.update(1)
-        return(simulation_data)
+        return((simulation_data,total_data))
 
     def analyze_compressed_trajectory(self,local_path):
         print(r''+local_path+'/bonddump.dump.bz2')

@@ -76,9 +76,11 @@ for i,folder in enumerate(simfolders):
     # Return full sequence data or return just numeric polymerization data.
     if not args.only_chain:
         print(dest_path+'/'+folder)
-        data = result.analyze_trajectory(dest_path+'/'+folder,compressed=args.compress)
+        data, rdf_data = result.analyze_trajectory(dest_path+'/'+folder,compressed=args.compress)
         data.to_csv(dest_path+'/'+folder+'/traj_analysis.csv')
         result.plot_trajectory(data)
+        with open(os.path.join(dest_path,folder,'rdf_analysis.json'),'w') as jfile:
+            json.dump(rdf_data,jfile,sort_keys=True,indent=2)
     else:
         print("Sending results to folder {}".format(os.path.join(dest_path,folder)))
         data = result.analyze_trajectory_by_function(os.path.join(dest_path,folder))
